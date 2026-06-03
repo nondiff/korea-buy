@@ -598,6 +598,103 @@
             color: var(--text-main);
             font-family: 'Comfortaa', sans-serif;
         }
+
+        /* 項目人員彩色標籤 */
+        .person-tag {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 6px;
+            margin-right: 6px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .person-tag.yishan {
+            background-color: #FFF0F2;
+            color: #D0586D;
+            border: 1px solid #FFD6DC;
+        }
+        .person-tag.ziqi {
+            background-color: #E8F5E9;
+            color: #2E7D32;
+            border: 1px solid #C8E6C9;
+        }
+        .person-tag.guanye {
+            background-color: #E8EAF6;
+            color: #3F51B5;
+            border: 1px solid #C5CAE9;
+        }
+
+        /* 免稅精緻標章 */
+        .taxfree-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 4px;
+            border-radius: 4px;
+            background-color: #FFF3E0;
+            color: #EF6C00;
+            border: 1px solid #FFE0B2;
+            margin-left: 6px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* 地點膠囊篩選列 */
+        .loc-filters-row {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 4px 2px 10px 2px;
+            margin-bottom: 14px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .loc-filters-row::-webkit-scrollbar {
+            display: none;
+        }
+        .loc-badge {
+            flex-shrink: 0;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .loc-badge.active {
+            background-color: var(--accent-color);
+            color: #fff;
+            border-color: var(--accent-color);
+            box-shadow: 0 3px 10px rgba(208, 106, 88, 0.2);
+        }
+
+        /* Checkbox 樣式 */
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            width: 100%;
+        }
+        .checkbox-container input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+            margin: 0;
+        }
+        .checkbox-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
     </style>
 </head>
 
@@ -631,6 +728,10 @@
             <button class="tab-btn" onclick="switchCategory('ziqi')">梓綺</button>
             <button class="tab-btn" onclick="switchCategory('guanye')">冠曄</button>
         </nav>
+
+        <div class="loc-filters-row" id="locFiltersContainer" style="display: none;">
+            <!-- 動態生成地點膠囊 -->
+        </div>
 
         <main class="items-grid" id="itemsContainer">
         </main>
@@ -676,6 +777,14 @@
             </div>
 
             <div class="detail-tile-box">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="modalTaxRefund">
+                    <span class="checkbox-label">是否退稅 (Tax Free)</span>
+                </label>
+                <div class="modal-hint-text" style="margin-top:4px; color:var(--text-muted); text-align:left;">若勾選且單筆總金額達 ₩15,000，將自動計算並減去約 7% 退稅金額。</div>
+            </div>
+
+            <div class="detail-tile-box">
                 <div class="tile-label">實際信用卡入帳台幣 (選填)</div>
                 <div style="display:flex; align-items:center; gap:8px; width:100%;">
                     <span style="font-family:'Comfortaa', sans-serif; font-weight:700; color:var(--text-muted); font-size:16px;">NT$</span>
@@ -686,7 +795,7 @@
 
             <div class="detail-tile-box location-box">
                 <div class="tile-label">地點</div>
-                <div class="location-value" id="modalLoc">---</div>
+                <input type="text" class="edit-input" id="modalLocInput" style="text-align: center;" placeholder="例如：東大門、Olive Young...">
             </div>
 
             <button class="save-btn" id="modalSaveBtn" onclick="saveItemChanges()">
@@ -750,6 +859,14 @@
             </div>
 
             <div class="detail-tile-box">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="addTaxRefund">
+                    <span class="checkbox-label">是否退稅 (Tax Free)</span>
+                </label>
+                <div class="modal-hint-text" style="margin-top:4px; color:var(--text-muted); text-align:left;">若勾選且單筆總金額達 ₩15,000，將自動計算並減去約 7% 退稅金額。</div>
+            </div>
+
+            <div class="detail-tile-box">
                 <div class="tile-label">實際信用卡入帳台幣 (選填)</div>
                 <div style="display:flex; align-items:center; gap:8px; width:100%;">
                     <span style="font-family:'Comfortaa', sans-serif; font-weight:700; color:var(--text-muted); font-size:16px;">NT$</span>
@@ -782,6 +899,7 @@
 
         let items = [];
         let currentFilter = 'all';
+        let currentLocFilter = 'all';
         let editingIndex = null;
         
         // 紀錄與動態學習 Notion 狀態與類別欄位使用的實際選項名稱
@@ -942,9 +1060,13 @@
                     // 8. ActualTwd 欄位
                     const actualTwd = p.ActualTwd?.number || null;
 
-                    return { id: page.id, category, name, price, quantity: p.Quantity?.number || 1, actualTwd, status, statusType, loc, desc, img };
+                    // 9. TaxRefund 欄位
+                    const taxRefund = p.TaxRefund?.checkbox || false;
+
+                    return { id: page.id, category, name, price, quantity: p.Quantity?.number || 1, actualTwd, taxRefund, status, statusType, loc, desc, img };
                 });
 
+                renderLocationFilters();
                 renderList();
 
             } catch (error) {
@@ -985,23 +1107,42 @@
             items.forEach((item, index) => {
                 if (currentFilter !== 'all' && item.category !== currentFilter) return;
 
+                // 地點膠囊過濾
+                if (currentLocFilter !== 'all') {
+                    const mainLoc = (item.loc || "").trim().split('/')[0].trim();
+                    if (mainLoc !== currentLocFilter) return;
+                }
+
                 const isDone = item.status === 'done';
                 const qty = item.quantity || 1;
-                let twdPriceText = "";
+                const totalCostKrw = item.price * qty;
+                const isTaxRefundEligible = item.taxRefund && totalCostKrw >= 15000;
                 
+                let twdPriceText = "";
                 if (item.actualTwd !== null && item.actualTwd !== undefined) {
-                    const unitTwd = Math.round(item.actualTwd / qty);
+                    // 如果有填寫實際台幣，這已經是刷卡最終扣款，但如果有勾選退稅，仍可能扣減
+                    const refundKrw = isTaxRefundEligible ? Math.round(totalCostKrw * 0.07) : 0;
+                    const refundTwd = Math.round(refundKrw / rate);
+                    const finalTwd = Math.max(0, item.actualTwd - refundTwd);
+                    const unitTwd = Math.round(finalTwd / qty);
                     twdPriceText = `💳 NT$ ${unitTwd.toLocaleString()}`;
                 } else {
-                    const twdPrice = Math.round(item.price / rate);
+                    const refundKrw = isTaxRefundEligible ? Math.round(totalCostKrw * 0.07) : 0;
+                    const netCostKrw = totalCostKrw - refundKrw;
+                    const twdPrice = Math.round((netCostKrw / qty) / rate);
                     twdPriceText = `約 NT$ ${twdPrice.toLocaleString()}`;
                 }
+
+                const personNames = { yishan: '依姍', ziqi: '梓綺', guanye: '冠曄' };
+                const personName = personNames[item.category] || '';
+                const personTagHtml = personName ? `<span class="person-tag ${item.category}">${personName}</span>` : '';
+                const taxFreeBadgeHtml = isTaxRefundEligible ? `<span class="taxfree-badge">免稅</span>` : '';
 
                 const cardHtml = `
                     <div class="item-row-card" onclick="openDetail(${index})">
                         <img class="item-row-img" src="${item.img}" alt="${item.name}">
                         <div class="item-row-info">
-                            <span class="item-row-name">${item.name} <span style="color:var(--accent-color); font-size:13px; font-weight:700; margin-left: 4px;">x${qty}</span></span>
+                            <span class="item-row-name">${personTagHtml}${item.name} <span style="color:var(--accent-color); font-size:13px; font-weight:700; margin-left: 4px;">x${qty}</span>${taxFreeBadgeHtml}</span>
                             <div class="item-row-meta">
                                 <span>📍 ${item.loc.split('/')[0].trim()}</span>
                             </div>
@@ -1028,8 +1169,10 @@
 
         function switchCategory(category) {
             currentFilter = category;
+            currentLocFilter = 'all'; // 重設地點篩選
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
+            renderLocationFilters();
             renderList();
         }
 
@@ -1097,7 +1240,8 @@
             document.getElementById('modalPriceInput').value = item.price;
             document.getElementById('modalQuantityInput').value = item.quantity || 1;
             document.getElementById('modalActualTwdInput').value = item.actualTwd !== null ? item.actualTwd : '';
-            document.getElementById('modalLoc').innerText = item.loc;
+            document.getElementById('modalTaxRefund').checked = item.taxRefund || false;
+            document.getElementById('modalLocInput').value = item.loc;
 
             // 即時計算台幣提示
             document.getElementById('modalTwdPriceHint').innerText = `約 NT$ ${twdPrice.toLocaleString()}`;
@@ -1120,7 +1264,9 @@
             const newQuantity = parseInt(document.getElementById('modalQuantityInput').value) || 1;
             const actualTwdVal = document.getElementById('modalActualTwdInput').value;
             const newActualTwd = actualTwdVal !== '' ? parseFloat(actualTwdVal) : null;
+            const newTaxRefund = document.getElementById('modalTaxRefund').checked;
             const newDesc = document.getElementById('modalDescInput').value.trim();
+            const newLoc = document.getElementById('modalLocInput').value.trim();
 
             // 鎖定按鈕並顯示載入中
             saveBtn.disabled = true;
@@ -1130,6 +1276,16 @@
                 "Price": { "number": newPrice },
                 "Quantity": { "number": newQuantity },
                 "ActualTwd": { "number": newActualTwd },
+                "TaxRefund": { "checkbox": newTaxRefund },
+                "Location": {
+                    "rich_text": [
+                        {
+                            "text": {
+                                "content": newLoc
+                            }
+                        }
+                    ]
+                },
                 "Description": {
                     "rich_text": [
                         {
@@ -1161,7 +1317,10 @@
                 item.price = newPrice;
                 item.quantity = newQuantity;
                 item.actualTwd = newActualTwd;
+                item.taxRefund = newTaxRefund;
                 item.desc = newDesc;
+                item.loc = newLoc;
+                renderLocationFilters();
                 renderList();
                 closeModal();
             } catch (error) {
@@ -1192,6 +1351,7 @@
             document.getElementById('addPrice').value = '';
             document.getElementById('addQuantity').value = '1';
             document.getElementById('addActualTwd').value = '';
+            document.getElementById('addTaxRefund').checked = false;
             document.getElementById('addDesc').value = '';
             document.getElementById('addLoc').value = '';
             document.getElementById('addTwdPriceHint').innerText = '約 NT$ 0';
@@ -1282,6 +1442,7 @@
             const quantity = parseInt(document.getElementById('addQuantity').value) || 1;
             const actualTwdVal = document.getElementById('addActualTwd').value;
             const actualTwd = actualTwdVal !== '' ? parseFloat(actualTwdVal) : null;
+            const taxRefund = document.getElementById('addTaxRefund').checked;
             const desc = document.getElementById('addDesc').value.trim();
             const loc = document.getElementById('addLoc').value.trim();
             
@@ -1327,6 +1488,9 @@
                 },
                 "ActualTwd": {
                     "number": actualTwd
+                },
+                "TaxRefund": {
+                    "checkbox": taxRefund
                 },
                 "Description": {
                     "rich_text": [
@@ -1395,6 +1559,7 @@
 
             let totalQty = 0;
             let doneQty = 0;
+            
             let totalSpentKrw = 0;
             let totalTodoKrw = 0;
             let totalSpentTwd = 0;
@@ -1408,33 +1573,49 @@
             let ziqiSpentTwd = 0;
             let guanyeSpentTwd = 0;
 
+            // 預計退稅統計
+            let totalRefundKrw = 0;
+            let totalRefundTwd = 0;
+
             items.forEach(item => {
                 const qty = item.quantity || 1;
                 totalQty += qty;
                 
                 const itemCostKrw = item.price * qty;
+                const isTaxRefundEligible = item.taxRefund && itemCostKrw >= 15000;
+                const refundKrw = isTaxRefundEligible ? Math.round(itemCostKrw * 0.07) : 0;
+                const refundTwd = Math.round(refundKrw / rate);
+
+                if (item.status === 'done') {
+                    totalRefundKrw += refundKrw;
+                    totalRefundTwd += refundTwd;
+                }
+
+                // 實際開銷 (扣除退稅)
                 const itemCostTwd = (item.actualTwd !== null && item.actualTwd !== undefined)
-                    ? item.actualTwd
-                    : Math.round(itemCostKrw / rate);
+                    ? Math.max(0, item.actualTwd - refundTwd)
+                    : Math.max(0, Math.round(itemCostKrw / rate) - refundTwd);
+
+                const netCostKrw = Math.max(0, itemCostKrw - refundKrw);
 
                 if (item.status === 'done') {
                     doneQty += qty;
-                    totalSpentKrw += itemCostKrw;
+                    totalSpentKrw += netCostKrw;
                     totalSpentTwd += itemCostTwd;
                     
                     if (item.category === 'yishan') {
-                        yishanSpent += itemCostKrw;
+                        yishanSpent += netCostKrw;
                         yishanSpentTwd += itemCostTwd;
                     } else if (item.category === 'ziqi') {
-                        ziqiSpent += itemCostKrw;
+                        ziqiSpent += netCostKrw;
                         ziqiSpentTwd += itemCostTwd;
                     } else if (item.category === 'guanye') {
-                        guanyeSpent += itemCostKrw;
+                        guanyeSpent += netCostKrw;
                         guanyeSpentTwd += itemCostTwd;
                     }
                 } else {
                     totalTodoKrw += itemCostKrw;
-                    totalTodoTwd += itemCostTwd;
+                    totalTodoTwd += Math.round(itemCostKrw / rate);
                 }
             });
 
@@ -1462,7 +1643,7 @@
                 <!-- 個人花費 (已買到) -->
                 <div>
                     <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: center; margin-bottom: 6px; letter-spacing: 0.5px;">
-                        👥 個人已消費統計 (已買到金額)
+                        👥 個人已消費統計 (已扣除退稅)
                     </div>
                     <div class="person-breakdown">
                         <div class="person-card">
@@ -1482,7 +1663,65 @@
                         </div>
                     </div>
                 </div>
+
+                ${totalRefundTwd > 0 ? `
+                <div class="summary-divider"></div>
+                <div style="font-size: 11px; font-weight: 700; color: #EF6C00; text-align: center; letter-spacing: 0.5px;">
+                    🛍️ 已買到可退稅額：NT$ ${totalRefundTwd.toLocaleString()} (約 ₩${totalRefundKrw.toLocaleString()})
+                </div>
+                ` : ''}
             `;
+        }
+
+        // 地點膠囊動態生成與切換
+        function renderLocationFilters() {
+            const container = document.getElementById('locFiltersContainer');
+            if (!container) return;
+
+            // 提取當前人名分頁下的所有可用地點
+            const activeItemsForLoc = items.filter(item => {
+                if (currentFilter !== 'all' && item.category !== currentFilter) return false;
+                return true;
+            });
+
+            const uniqueLocations = new Set();
+            activeItemsForLoc.forEach(item => {
+                const loc = (item.loc || "").trim();
+                if (loc && loc !== "未指定地點") {
+                    const mainLoc = loc.split('/')[0].trim();
+                    if (mainLoc) uniqueLocations.add(mainLoc);
+                }
+            });
+
+            const locList = Array.from(uniqueLocations).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+
+            if (locList.length === 0) {
+                container.style.display = 'none';
+                currentLocFilter = 'all';
+                return;
+            }
+            container.style.display = 'flex';
+
+            let html = `<div class="loc-badge ${currentLocFilter === 'all' ? 'active' : ''}" onclick="switchLocFilter('all')">📍 全部地點</div>`;
+            locList.forEach(loc => {
+                const isActive = currentLocFilter === loc;
+                html += `<div class="loc-badge ${isActive ? 'active' : ''}" onclick="switchLocFilter('${loc}')">📍 ${loc}</div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function switchLocFilter(loc) {
+            currentLocFilter = loc;
+            document.querySelectorAll('.loc-badge').forEach(badge => {
+                const text = badge.innerText.replace('📍 ', '').trim();
+                if ((loc === 'all' && text === '全部地點') || text === loc) {
+                    badge.classList.add('active');
+                } else {
+                    badge.classList.remove('active');
+                }
+            });
+            renderList();
         }
 
     </script>
