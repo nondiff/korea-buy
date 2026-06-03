@@ -737,14 +737,17 @@
                     })
                 });
 
-                if (!response.ok) throw new Error("更新狀態失敗");
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.message || errData.error || `HTTP ${response.status}`);
+                }
 
                 // 更新成功後修改本地狀態並重繪
                 item.status = nextStatus;
                 renderList();
             } catch (error) {
                 console.error("更新狀態出錯:", error);
-                alert("更新狀態失敗，請確認 Notion 權限或網路連線！");
+                alert("更新狀態失敗：" + error.message + "\n請確認 Notion 權限或網路連線！");
                 // 還原圖示
                 badge.classList.remove('updating');
                 badge.innerHTML = originalIcon;
@@ -811,7 +814,10 @@
                     })
                 });
 
-                if (!response.ok) throw new Error("儲存修改失敗");
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.message || errData.error || `HTTP ${response.status}`);
+                }
 
                 // 更新成功後修改本地狀態並重繪
                 item.price = newPrice;
@@ -820,7 +826,7 @@
                 closeModal();
             } catch (error) {
                 console.error("儲存修改出錯:", error);
-                alert("儲存修改失敗，請確認 Notion 權限或網路連線！");
+                alert("儲存修改失敗：" + error.message + "\n請確認 Notion 權限或網路連線！");
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 儲存變更';
             }
