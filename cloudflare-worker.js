@@ -62,15 +62,25 @@ export default {
       }
 
       // 呼叫 Notion 官方 API
-      const response = await fetch(notionUrl, {
+      const fetchHeaders = {
+        "Authorization": `Bearer ${token}`,
+        "Notion-Version": "2022-06-28"
+      };
+
+      if (method !== "GET") {
+        fetchHeaders["Content-Type"] = "application/json";
+      }
+
+      const fetchOptions = {
         method: method,
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Notion-Version": "2022-06-28",
-          "Content-Type": "application/json"
-        },
-        body: bodyPayload
-      });
+        headers: fetchHeaders
+      };
+
+      if (method !== "GET" && bodyPayload !== undefined) {
+        fetchOptions.body = bodyPayload;
+      }
+
+      const response = await fetch(notionUrl, fetchOptions);
 
       const data = await response.json();
 
