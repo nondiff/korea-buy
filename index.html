@@ -810,6 +810,11 @@
                 <div class="modal-hint-text" style="margin-top:6px; color:var(--text-muted);">填寫此欄位將以此金額作為精準台幣統計，不再以匯率換算。</div>
             </div>
 
+            <div class="detail-tile-box">
+                <div class="tile-label">韓國發票號碼 (選填)</div>
+                <input type="text" class="edit-input" id="modalInvoiceNoInput" style="text-align: center;" placeholder="請輸入發票或收據號碼...">
+            </div>
+
             <div class="detail-tile-box location-box">
                 <div class="tile-label">地點</div>
                 <input type="text" class="edit-input" id="modalLocInput" style="text-align: center;" placeholder="例如：東大門、Olive Young...">
@@ -895,6 +900,11 @@
             <div class="detail-tile-box">
                 <div class="tile-label">✧ 備註說明</div>
                 <textarea class="edit-textarea" id="addDesc" placeholder="請輸入備註或說明..."></textarea>
+            </div>
+
+            <div class="detail-tile-box">
+                <div class="tile-label">韓國發票號碼 (選填)</div>
+                <input type="text" class="edit-input" id="addInvoiceNo" style="text-align: center;" placeholder="請輸入發票或收據號碼...">
             </div>
 
             <div class="detail-tile-box">
@@ -1051,6 +1061,9 @@
                     // 5. Description 欄位
                     const desc = p.Description?.rich_text?.[0]?.plain_text || "";
 
+                    // 10. InvoiceNo 欄位
+                    const invoiceNo = p.InvoiceNo?.rich_text?.[0]?.plain_text || "";
+
                     // 6. Status 欄位：模糊比對文字，只要包含 done 就是已買到，否則為 todo
                     const rawStatus = p.Status?.select?.name || p.Status?.status?.name || "";
                     const isDone = (rawStatus.toLowerCase().includes('done') || rawStatus.includes('已') || rawStatus.includes('完')) && !rawStatus.toLowerCase().includes('todo') && !rawStatus.includes('待') && !rawStatus.includes('未');
@@ -1080,7 +1093,7 @@
                     // 9. TaxRefund 欄位
                     const taxRefund = p.TaxRefund?.checkbox || false;
 
-                    return { id: page.id, category, name, price, quantity: p.Quantity?.number || 1, actualTwd, taxRefund, status, statusType, loc, desc, img };
+                    return { id: page.id, category, name, price, quantity: p.Quantity?.number || 1, actualTwd, taxRefund, status, statusType, loc, desc, img, invoiceNo };
                 });
 
                 renderLocationFilters();
@@ -1162,6 +1175,7 @@
                             <span class="item-row-name">${personTagHtml}${item.name} <span style="color:var(--accent-color); font-size:13px; font-weight:700; margin-left: 4px;">x${qty}</span>${taxFreeBadgeHtml}</span>
                             <div class="item-row-meta">
                                 <span>📍 ${item.loc.split('/')[0].trim()}</span>
+                                ${item.invoiceNo ? `<span style="margin-left: 8px;">🧾 ${item.invoiceNo}</span>` : ''}
                             </div>
                             <span class="item-row-price">₩${item.price.toLocaleString()} (${twdPriceText})</span>
                             ${item.desc ? `<div class="item-row-desc"><i class="fa-regular fa-comment-dots" style="font-size: 11px;"></i> ${item.desc}</div>` : ''}
@@ -1260,6 +1274,7 @@
             document.getElementById('modalActualTwdInput').value = item.actualTwd !== null ? item.actualTwd : '';
             document.getElementById('modalTaxRefund').checked = item.taxRefund || false;
             document.getElementById('modalLocInput').value = item.loc;
+            document.getElementById('modalInvoiceNoInput').value = item.invoiceNo || '';
 
             // 即時計算台幣提示
             document.getElementById('modalTwdPriceHint').innerText = `約 NT$ ${twdPrice.toLocaleString()}`;
@@ -1285,6 +1300,7 @@
             const newTaxRefund = document.getElementById('modalTaxRefund').checked;
             const newDesc = document.getElementById('modalDescInput').value.trim();
             const newLoc = document.getElementById('modalLocInput').value.trim();
+            const newInvoiceNo = document.getElementById('modalInvoiceNoInput').value.trim();
 
             // 鎖定按鈕並顯示載入中
             saveBtn.disabled = true;
@@ -1300,6 +1316,15 @@
                         {
                             "text": {
                                 "content": newLoc
+                            }
+                        }
+                    ]
+                },
+                "InvoiceNo": {
+                    "rich_text": [
+                        {
+                            "text": {
+                                "content": newInvoiceNo
                             }
                         }
                     ]
@@ -1338,6 +1363,7 @@
                 item.taxRefund = newTaxRefund;
                 item.desc = newDesc;
                 item.loc = newLoc;
+                item.invoiceNo = newInvoiceNo;
                 renderLocationFilters();
                 renderList();
                 closeModal();
@@ -1372,6 +1398,7 @@
             document.getElementById('addTaxRefund').checked = false;
             document.getElementById('addDesc').value = '';
             document.getElementById('addLoc').value = '';
+            document.getElementById('addInvoiceNo').value = '';
             document.getElementById('addTwdPriceHint').innerText = '約 NT$ 0';
             
             // 重設圖片上傳與預覽狀態
@@ -1463,6 +1490,7 @@
             const taxRefund = document.getElementById('addTaxRefund').checked;
             const desc = document.getElementById('addDesc').value.trim();
             const loc = document.getElementById('addLoc').value.trim();
+            const invoiceNo = document.getElementById('addInvoiceNo').value.trim();
             
             if (!name) {
                 alert("請填寫商品名稱！");
@@ -1509,6 +1537,15 @@
                 },
                 "TaxRefund": {
                     "checkbox": taxRefund
+                },
+                "InvoiceNo": {
+                    "rich_text": [
+                        {
+                            "text": {
+                                "content": invoiceNo
+                            }
+                        }
+                    ]
                 },
                 "Description": {
                     "rich_text": [
