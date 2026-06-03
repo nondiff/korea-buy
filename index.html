@@ -623,12 +623,13 @@
             <div class="detail-tile-box">
                 <div class="tile-label">✧ 商品圖片</div>
                 <input type="file" id="addImage" accept="image/*" style="display:none;" onchange="handleImageSelect(event)">
-                <div class="modal-img-container" style="height:150px; cursor:pointer; display:flex; justify-content:center; align-items:center;" onclick="document.getElementById('addImage').click()">
+                <div class="modal-img-container" style="height:170px; cursor:pointer; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6px;" onclick="document.getElementById('addImage').click()">
                     <div id="addImgPlaceholder" style="color:var(--text-muted); font-size:13px; text-align:center;">
                         <i class="fa-solid fa-camera" style="font-size:28px; margin-bottom:8px; display:block; color:var(--accent-color);"></i>
                         點擊此處拍照或選擇相片
                     </div>
-                    <img class="modal-img" id="addImgPreview" src="" alt="預覽圖片" style="display:none; max-height:100%; border-radius:12px;">
+                    <img class="modal-img" id="addImgPreview" src="" alt="預覽圖片" style="display:none; max-height:120px; border-radius:12px;">
+                    <div id="addImgSizeHint" style="font-size:11px; color:var(--text-muted); display:none; margin-top:2px;"></div>
                 </div>
             </div>
 
@@ -1016,6 +1017,8 @@
             document.getElementById('addImgPlaceholder').style.display = 'block';
             document.getElementById('addImgPreview').style.display = 'none';
             document.getElementById('addImgPreview').src = '';
+            document.getElementById('addImgSizeHint').style.display = 'none';
+            document.getElementById('addImgSizeHint').innerText = '';
             compressedImageBase64 = null;
             
             const btn = document.getElementById('addSaveBtn');
@@ -1069,11 +1072,19 @@
                     // 壓縮為 jpeg，品質 0.7 左右 (可大幅減少至 300KB 以內)
                     compressedImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
                     
+                    // 計算約略大小並顯示
+                    const sizeInBytes = Math.round((compressedImageBase64.length * 3) / 4);
+                    const sizeInKb = (sizeInBytes / 1024).toFixed(1);
+                    
                     // 顯示預覽
                     document.getElementById('addImgPlaceholder').style.display = 'none';
                     const preview = document.getElementById('addImgPreview');
                     preview.src = compressedImageBase64;
                     preview.style.display = 'block';
+                    
+                    const sizeHint = document.getElementById('addImgSizeHint');
+                    sizeHint.innerText = `已壓縮: ${sizeInKb} KB (點擊可更換)`;
+                    sizeHint.style.display = 'block';
                 };
                 img.src = e.target.result;
             };
@@ -1166,7 +1177,12 @@
                     throw new Error(errData.message || errData.error || `HTTP ${response.status}`);
                 }
 
-                alert("商品已成功新增到 Notion！");
+                const result = await response.json();
+                if (compressedImageBase64 && result.imageUploadError) {
+                    alert("⚠️ 商品已成功新增到 Notion，但圖片上傳失敗！\n\n失敗原因：\n" + result.imageUploadError + "\n\n💡 建議與提示：\n1. 如果您尚未在 Cloudflare Worker 中設定 IMGBB_API_KEY 環境變數，強烈建議您前往 https://api.imgbb.com/ 註冊免費帳號並取得 API Key，然後在 Cloudflare Worker 儀表板的 Environment Variables 設定中新增變數，因為備用的 Catbox 匿名上傳服務極易受到 Cloudflare / 網路限制而失敗。\n2. 請確認您的手機網路連線是否穩定。");
+                } else {
+                    alert("🎉 商品已成功新增到 Notion！");
+                }
                 closeAddModal();
                 fetchFromNotion();
             } catch (error) {

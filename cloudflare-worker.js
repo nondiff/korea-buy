@@ -45,6 +45,7 @@ export default {
       let bodyPayload;
 
       let imageUrl = null;
+      let uploadErrorMessage = "";
 
       // 如果有上傳圖片檔案 (Base64)
       if (requestData.imageFile) {
@@ -65,40 +66,64 @@ export default {
             if (imgbbResponse.ok) {
               const imgbbData = await imgbbResponse.json();
               imageUrl = imgbbData.data?.url;
+              if (!imageUrl) {
+                uploadErrorMessage += "ImgBB 上傳成功但未回傳圖片網址。";
+              }
+            } else {
+              const errText = await imgbbResponse.text();
+              uploadErrorMessage += `ImgBB 上傳失敗 (HTTP ${imgbbResponse.status}): ${errText.substring(0, 150)}。`;
             }
+          } else {
+            uploadErrorMessage += "未設定環境變數 IMGBB_API_KEY。";
           }
 
           // 如果沒有 ImgBB 金鑰或上傳失敗，備用上傳到 Catbox
           if (!imageUrl) {
-            const base64Parts = base64String.split(',');
-            const mimeType = base64Parts[0].match(/:(.*?);/)[1];
-            const base64Data = base64Parts[1];
-            
-            // 解碼 Base64 為 Binary Uint8Array
-            const byteCharacters = atob(base64Data);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-              byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            const fileBlob = new Blob([byteArray], { type: mimeType });
+            try {
+              const base64Parts = base64String.split(',');
+              if (base64Parts.length < 2) {
+                throw new Error("Base64 資料格式不正確");
+              }
+              const mimeType = base64Parts[0].match(/:(.*?);/)[1];
+              const base64Data = base64Parts[1];
+              
+              // 解碼 Base64 為 Binary Uint8Array
+              const byteCharacters = atob(base64Data);
+              const byteNumbers = new Array(byteCharacters.length);
+              for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+              }
+              const byteArray = new Uint8Array(byteNumbers);
+              const fileBlob = new Blob([byteArray], { type: mimeType });
 
-            const formData = new FormData();
-            formData.append("reqtype", "fileupload");
-            formData.append("fileToUpload", fileBlob, "upload.jpg");
+              const formData = new FormData();
+              formData.append("reqtype", "fileupload");
+              formData.append("fileToUpload", fileBlob, "upload.jpg");
 
-            const catboxResponse = await fetch("https://catbox.moe/user/api.php", {
-              method: "POST",
-              body: formData
-            });
-            
-            if (catboxResponse.ok) {
-              imageUrl = await catboxResponse.text();
-              imageUrl = imageUrl.trim();
+              const catboxResponse = await fetch("https://catbox.moe/user/api.php", {
+                method: "POST",
+                body: formData
+              });
+              
+              if (catboxResponse.ok) {
+                const responseText = await catboxResponse.text();
+                const trimmedResponse = responseText.trim();
+                if (trimmedResponse.startsWith("http")) {
+                  imageUrl = trimmedResponse;
+                } else {
+                  uploadErrorMessage += ` Catbox 備用上傳未回傳網址: ${trimmedResponse.substring(0, 150)}。`;
+                }
+              } else {
+                const errText = await catboxResponse.text();
+                uploadErrorMessage += ` Catbox 備用上傳失敗 (HTTP ${catboxResponse.status}): ${errText.substring(0, 150)}。`;
+              }
+            } catch (catboxErr) {
+              uploadErrorMessage += ` Catbox 備用上傳過程出錯: ${catboxErr.message || String(catboxErr)}。`;
             }
           }
         } catch (uploadErr) {
           console.error("圖片上傳失敗:", uploadErr);
+          uploadErrorMessage += ` 圖片處理/上傳過程發生例外錯誤: ${uploadErr.message || String(uploadErr)}。`;
         }
       }
 
@@ -164,6 +189,14 @@ export default {
       const response = await fetch(notionUrl, fetchOptions);
 
       const data = await response.json();
+
+      // 如果有嘗試上傳圖片，將結果或錯誤附加到回應中，方便前端診斷
+      if (requestData.imageFile && data && typeof data === "object") {
+        data.imageUrl = imageUrl;
+        if (!imageUrl) {
+          data.imageUploadError = uploadErrorMessage || "圖片上傳失敗，且無詳細錯誤訊息";
+        }
+      }
 
       return new Response(JSON.stringify(data), {
         status: response.status,
