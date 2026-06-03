@@ -675,6 +675,15 @@
                 </div>
             </div>
 
+            <div class="detail-tile-box">
+                <div class="tile-label">實際信用卡入帳台幣 (選填)</div>
+                <div style="display:flex; align-items:center; gap:8px; width:100%;">
+                    <span style="font-family:'Comfortaa', sans-serif; font-weight:700; color:var(--text-muted); font-size:16px;">NT$</span>
+                    <input type="number" class="edit-input" id="modalActualTwdInput" style="font-family:'Comfortaa', sans-serif; font-weight:700;" placeholder="請輸入總刷卡台幣(含手續費)..." min="0">
+                </div>
+                <div class="modal-hint-text" style="margin-top:6px; color:var(--text-muted);">填寫此欄位將以此金額作為精準台幣統計，不再以匯率換算。</div>
+            </div>
+
             <div class="detail-tile-box location-box">
                 <div class="tile-label">地點</div>
                 <div class="location-value" id="modalLoc">---</div>
@@ -738,6 +747,15 @@
                     <div class="tile-label">數量</div>
                     <input type="number" class="edit-input" id="addQuantity" style="font-family:'Comfortaa', sans-serif; font-weight:700; text-align:center; padding: 10px 4px;" value="1" min="1" step="1">
                 </div>
+            </div>
+
+            <div class="detail-tile-box">
+                <div class="tile-label">實際信用卡入帳台幣 (選填)</div>
+                <div style="display:flex; align-items:center; gap:8px; width:100%;">
+                    <span style="font-family:'Comfortaa', sans-serif; font-weight:700; color:var(--text-muted); font-size:16px;">NT$</span>
+                    <input type="number" class="edit-input" id="addActualTwd" style="font-family:'Comfortaa', sans-serif; font-weight:700;" placeholder="請輸入總刷卡台幣(含手續費)..." min="0">
+                </div>
+                <div class="modal-hint-text" style="margin-top:6px; color:var(--text-muted);">填寫此欄位將以此金額作為精準台幣統計，不再以匯率換算。</div>
             </div>
 
             <div class="detail-tile-box">
@@ -921,7 +939,10 @@
                         img = files[0].file?.url || files[0].external?.url || img;
                     }
 
-                    return { id: page.id, category, name, price, quantity: p.Quantity?.number || 1, status, statusType, loc, desc, img };
+                    // 8. ActualTwd 欄位
+                    const actualTwd = p.ActualTwd?.number || null;
+
+                    return { id: page.id, category, name, price, quantity: p.Quantity?.number || 1, actualTwd, status, statusType, loc, desc, img };
                 });
 
                 renderList();
@@ -964,18 +985,27 @@
             items.forEach((item, index) => {
                 if (currentFilter !== 'all' && item.category !== currentFilter) return;
 
-                const twdPrice = Math.round(item.price / rate);
                 const isDone = item.status === 'done';
+                const qty = item.quantity || 1;
+                let twdPriceText = "";
+                
+                if (item.actualTwd !== null && item.actualTwd !== undefined) {
+                    const unitTwd = Math.round(item.actualTwd / qty);
+                    twdPriceText = `💳 NT$ ${unitTwd.toLocaleString()}`;
+                } else {
+                    const twdPrice = Math.round(item.price / rate);
+                    twdPriceText = `約 NT$ ${twdPrice.toLocaleString()}`;
+                }
 
                 const cardHtml = `
                     <div class="item-row-card" onclick="openDetail(${index})">
                         <img class="item-row-img" src="${item.img}" alt="${item.name}">
                         <div class="item-row-info">
-                            <span class="item-row-name">${item.name} <span style="color:var(--accent-color); font-size:13px; font-weight:700; margin-left: 4px;">x${item.quantity || 1}</span></span>
+                            <span class="item-row-name">${item.name} <span style="color:var(--accent-color); font-size:13px; font-weight:700; margin-left: 4px;">x${qty}</span></span>
                             <div class="item-row-meta">
                                 <span>📍 ${item.loc.split('/')[0].trim()}</span>
                             </div>
-                            <span class="item-row-price">₩${item.price.toLocaleString()} (約 NT$ ${twdPrice})</span>
+                            <span class="item-row-price">₩${item.price.toLocaleString()} (${twdPriceText})</span>
                         </div>
                         <div class="check-badge ${isDone ? 'done' : 'todo'}" onclick="toggleStatus(event, ${index})">
                             <i class="fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle'}"></i>
@@ -1066,6 +1096,7 @@
             document.getElementById('modalDescInput').value = item.desc;
             document.getElementById('modalPriceInput').value = item.price;
             document.getElementById('modalQuantityInput').value = item.quantity || 1;
+            document.getElementById('modalActualTwdInput').value = item.actualTwd !== null ? item.actualTwd : '';
             document.getElementById('modalLoc').innerText = item.loc;
 
             // 即時計算台幣提示
@@ -1087,6 +1118,8 @@
             
             const newPrice = parseFloat(document.getElementById('modalPriceInput').value) || 0;
             const newQuantity = parseInt(document.getElementById('modalQuantityInput').value) || 1;
+            const actualTwdVal = document.getElementById('modalActualTwdInput').value;
+            const newActualTwd = actualTwdVal !== '' ? parseFloat(actualTwdVal) : null;
             const newDesc = document.getElementById('modalDescInput').value.trim();
 
             // 鎖定按鈕並顯示載入中
@@ -1096,6 +1129,7 @@
             const properties = {
                 "Price": { "number": newPrice },
                 "Quantity": { "number": newQuantity },
+                "ActualTwd": { "number": newActualTwd },
                 "Description": {
                     "rich_text": [
                         {
@@ -1126,6 +1160,7 @@
                 // 更新成功後修改本地狀態並重繪
                 item.price = newPrice;
                 item.quantity = newQuantity;
+                item.actualTwd = newActualTwd;
                 item.desc = newDesc;
                 renderList();
                 closeModal();
@@ -1156,6 +1191,7 @@
             document.getElementById('addCategory').value = 'yishan';
             document.getElementById('addPrice').value = '';
             document.getElementById('addQuantity').value = '1';
+            document.getElementById('addActualTwd').value = '';
             document.getElementById('addDesc').value = '';
             document.getElementById('addLoc').value = '';
             document.getElementById('addTwdPriceHint').innerText = '約 NT$ 0';
@@ -1244,6 +1280,8 @@
             const categoryKey = document.getElementById('addCategory').value;
             const price = parseFloat(document.getElementById('addPrice').value) || 0;
             const quantity = parseInt(document.getElementById('addQuantity').value) || 1;
+            const actualTwdVal = document.getElementById('addActualTwd').value;
+            const actualTwd = actualTwdVal !== '' ? parseFloat(actualTwdVal) : null;
             const desc = document.getElementById('addDesc').value.trim();
             const loc = document.getElementById('addLoc').value.trim();
             
@@ -1286,6 +1324,9 @@
                 },
                 "Quantity": {
                     "number": quantity
+                },
+                "ActualTwd": {
+                    "number": actualTwd
                 },
                 "Description": {
                     "rich_text": [
@@ -1356,39 +1397,46 @@
             let doneQty = 0;
             let totalSpentKrw = 0;
             let totalTodoKrw = 0;
+            let totalSpentTwd = 0;
+            let totalTodoTwd = 0;
 
             let yishanSpent = 0;
             let ziqiSpent = 0;
             let guanyeSpent = 0;
 
+            let yishanSpentTwd = 0;
+            let ziqiSpentTwd = 0;
+            let guanyeSpentTwd = 0;
+
             items.forEach(item => {
                 const qty = item.quantity || 1;
                 totalQty += qty;
                 
-                const itemCost = item.price * qty;
+                const itemCostKrw = item.price * qty;
+                const itemCostTwd = (item.actualTwd !== null && item.actualTwd !== undefined)
+                    ? item.actualTwd
+                    : Math.round(itemCostKrw / rate);
 
                 if (item.status === 'done') {
                     doneQty += qty;
-                    totalSpentKrw += itemCost;
+                    totalSpentKrw += itemCostKrw;
+                    totalSpentTwd += itemCostTwd;
                     
                     if (item.category === 'yishan') {
-                        yishanSpent += itemCost;
+                        yishanSpent += itemCostKrw;
+                        yishanSpentTwd += itemCostTwd;
                     } else if (item.category === 'ziqi') {
-                        ziqiSpent += itemCost;
+                        ziqiSpent += itemCostKrw;
+                        ziqiSpentTwd += itemCostTwd;
                     } else if (item.category === 'guanye') {
-                        guanyeSpent += itemCost;
+                        guanyeSpent += itemCostKrw;
+                        guanyeSpentTwd += itemCostTwd;
                     }
                 } else {
-                    totalTodoKrw += itemCost;
+                    totalTodoKrw += itemCostKrw;
+                    totalTodoTwd += itemCostTwd;
                 }
             });
-
-            const totalSpentTwd = Math.round(totalSpentKrw / rate);
-            const totalTodoTwd = Math.round(totalTodoKrw / rate);
-
-            const yishanTwd = Math.round(yishanSpent / rate);
-            const ziqiTwd = Math.round(ziqiSpent / rate);
-            const guanyeTwd = Math.round(guanyeSpent / rate);
 
             summaryWidget.innerHTML = `
                 <!-- 全域指標 -->
@@ -1400,12 +1448,12 @@
                     <div class="summary-col">
                         <span class="summary-label">₩ 已完成消費</span>
                         <span class="summary-value">₩${totalSpentKrw.toLocaleString()}</span>
-                        <span style="font-size: 11px; color: var(--accent-color); font-weight: 700; margin-top: 2px;">約 NT$ ${totalSpentTwd.toLocaleString()}</span>
+                        <span style="font-size: 11px; color: var(--accent-color); font-weight: 700; margin-top: 2px;">NT$ ${totalSpentTwd.toLocaleString()}</span>
                     </div>
                     <div class="summary-col">
                         <span class="summary-label">⏳ 未買預算</span>
                         <span class="summary-value" style="color: var(--text-muted);">₩${totalTodoKrw.toLocaleString()}</span>
-                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 500; margin-top: 2px;">約 NT$ ${totalTodoTwd.toLocaleString()}</span>
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 500; margin-top: 2px;">NT$ ${totalTodoTwd.toLocaleString()}</span>
                     </div>
                 </div>
                 
@@ -1420,17 +1468,17 @@
                         <div class="person-card">
                             <span class="person-name">依姍</span>
                             <span class="person-price" style="color: var(--text-main); font-size:12px;">₩${yishanSpent.toLocaleString()}</span>
-                            <span style="font-size: 10px; color: var(--accent-color); font-weight: 700; margin-top: 1px;">NT$ ${yishanTwd.toLocaleString()}</span>
+                            <span style="font-size: 10px; color: var(--accent-color); font-weight: 700; margin-top: 1px;">NT$ ${yishanSpentTwd.toLocaleString()}</span>
                         </div>
                         <div class="person-card">
                             <span class="person-name">梓綺</span>
                             <span class="person-price" style="color: var(--text-main); font-size:12px;">₩${ziqiSpent.toLocaleString()}</span>
-                            <span style="font-size: 10px; color: var(--accent-color); font-weight: 700; margin-top: 1px;">NT$ ${ziqiTwd.toLocaleString()}</span>
+                            <span style="font-size: 10px; color: var(--accent-color); font-weight: 700; margin-top: 1px;">NT$ ${ziqiSpentTwd.toLocaleString()}</span>
                         </div>
                         <div class="person-card">
                             <span class="person-name">冠曄</span>
                             <span class="person-price" style="color: var(--text-main); font-size:12px;">₩${guanyeSpent.toLocaleString()}</span>
-                            <span style="font-size: 10px; color: var(--accent-color); font-weight: 700; margin-top: 1px;">NT$ ${guanyeTwd.toLocaleString()}</span>
+                            <span style="font-size: 10px; color: var(--accent-color); font-weight: 700; margin-top: 1px;">NT$ ${guanyeSpentTwd.toLocaleString()}</span>
                         </div>
                     </div>
                 </div>
