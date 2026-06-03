@@ -550,7 +550,17 @@
 
             <button class="save-btn" id="modalSaveBtn" onclick="saveItemChanges()">
                 <i class="fa-solid fa-cloud-arrow-up"></i> 儲存變更
-               let items = [];
+            </button>
+
+            <div class="modal-hint-text">點擊空白處或上方關閉返回列表</div>
+        </div>
+    </div>
+
+    <script>
+        // 🔗 您的 Cloudflare Worker 代理網址（部署完 Worker 後請在此填入您的 Worker 網址）
+        const WORKER_URL = "https://seoul-buy-proxy.caici1314520.workers.dev/";
+
+        let items = [];
         let currentFilter = 'all';
         let editingIndex = null;
         
