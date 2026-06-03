@@ -620,6 +620,18 @@
                 </select>
             </div>
 
+            <div class="detail-tile-box">
+                <div class="tile-label">✧ 商品圖片</div>
+                <input type="file" id="addImage" accept="image/*" style="display:none;" onchange="handleImageSelect(event)">
+                <div class="modal-img-container" style="height:150px; cursor:pointer; display:flex; justify-content:center; align-items:center;" onclick="document.getElementById('addImage').click()">
+                    <div id="addImgPlaceholder" style="color:var(--text-muted); font-size:13px; text-align:center;">
+                        <i class="fa-solid fa-camera" style="font-size:28px; margin-bottom:8px; display:block; color:var(--accent-color);"></i>
+                        點擊此處拍照或選擇相片
+                    </div>
+                    <img class="modal-img" id="addImgPreview" src="" alt="預覽圖片" style="display:none; max-height:100%; border-radius:12px;">
+                </div>
+            </div>
+
             <div class="detail-tile-box price-box">
                 <div class="tile-label">價格 (KRW ₩)</div>
                 <div style="display:flex; align-items:center; gap:8px; width:100%;">
@@ -988,6 +1000,8 @@
             }
         }
 
+        let compressedImageBase64 = null;
+
         // 新增商品 Modal 控制與送出邏輯
         function openAddModal() {
             document.getElementById('addName').value = '';
@@ -996,6 +1010,13 @@
             document.getElementById('addDesc').value = '';
             document.getElementById('addLoc').value = '';
             document.getElementById('addTwdPriceHint').innerText = '約 NT$ 0';
+            
+            // 重設圖片上傳與預覽狀態
+            document.getElementById('addImage').value = '';
+            document.getElementById('addImgPlaceholder').style.display = 'block';
+            document.getElementById('addImgPreview').style.display = 'none';
+            document.getElementById('addImgPreview').src = '';
+            compressedImageBase64 = null;
             
             const btn = document.getElementById('addSaveBtn');
             btn.disabled = false;
@@ -1012,6 +1033,51 @@
             if (event.target === document.getElementById('addModal')) {
                 closeAddModal();
             }
+        }
+
+        // 手機/瀏覽器選取圖片與壓縮邏輯
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const img = new Image();
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const max_size = 800; // 限制最大寬高以加速傳輸
+
+                    if (width > height) {
+                        if (width > max_size) {
+                            height *= max_size / width;
+                            width = max_size;
+                        }
+                    } else {
+                        if (height > max_size) {
+                            width *= max_size / height;
+                            height = max_size;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // 壓縮為 jpeg，品質 0.7 左右 (可大幅減少至 300KB 以內)
+                    compressedImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    // 顯示預覽
+                    document.getElementById('addImgPlaceholder').style.display = 'none';
+                    const preview = document.getElementById('addImgPreview');
+                    preview.src = compressedImageBase64;
+                    preview.style.display = 'block';
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
         async function submitNewItem() {
@@ -1079,14 +1145,20 @@
                 "Status": statusPayload
             };
 
+            const payload = {
+                action: "createPage",
+                properties: properties
+            };
+
+            if (compressedImageBase64) {
+                payload.imageFile = compressedImageBase64;
+            }
+
             try {
                 const response = await fetch(WORKER_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        action: "createPage",
-                        properties: properties
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) {

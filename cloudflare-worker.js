@@ -44,6 +44,79 @@ export default {
       let method;
       let bodyPayload;
 
+      let imageUrl = null;
+
+      // 如果有上傳圖片檔案 (Base64)
+      if (requestData.imageFile) {
+        try {
+          const base64String = requestData.imageFile;
+          
+          if (env.IMGBB_API_KEY) {
+            // 優先上傳到 ImgBB
+            const cleanBase64 = base64String.replace(/^data:image\/\w+;base64,/, "");
+            const formData = new FormData();
+            formData.append("image", cleanBase64);
+
+            const imgbbResponse = await fetch(`https://api.imgbb.com/1/upload?key=${env.IMGBB_API_KEY}`, {
+              method: "POST",
+              body: formData
+            });
+
+            if (imgbbResponse.ok) {
+              const imgbbData = await imgbbResponse.json();
+              imageUrl = imgbbData.data?.url;
+            }
+          }
+
+          // 如果沒有 ImgBB 金鑰或上傳失敗，備用上傳到 Catbox
+          if (!imageUrl) {
+            const base64Parts = base64String.split(',');
+            const mimeType = base64Parts[0].match(/:(.*?);/)[1];
+            const base64Data = base64Parts[1];
+            
+            // 解碼 Base64 為 Binary Uint8Array
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const fileBlob = new Blob([byteArray], { type: mimeType });
+
+            const formData = new FormData();
+            formData.append("reqtype", "fileupload");
+            formData.append("fileToUpload", fileBlob, "upload.jpg");
+
+            const catboxResponse = await fetch("https://catbox.moe/user/api.php", {
+              method: "POST",
+              body: formData
+            });
+            
+            if (catboxResponse.ok) {
+              imageUrl = await catboxResponse.text();
+              imageUrl = imageUrl.trim();
+            }
+          }
+        } catch (uploadErr) {
+          console.error("圖片上傳失敗:", uploadErr);
+        }
+      }
+
+      // 如果成功取得圖片網址，將其寫入 properties 的 Image 欄位
+      if (imageUrl && imageUrl.startsWith("http") && requestData.properties) {
+        requestData.properties["Image"] = {
+          "files": [
+            {
+              "name": "手機上傳圖片.jpg",
+              "type": "external",
+              "external": {
+                "url": imageUrl
+              }
+            }
+          ]
+        };
+      }
+
       // 如果請求包含 action: "update" 與 pageId，則進行頁面屬性修改 (PATCH)
       if (requestData.action === "update" && requestData.pageId) {
         notionUrl = `https://api.notion.com/v1/pages/${requestData.pageId}`;
