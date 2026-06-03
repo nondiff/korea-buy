@@ -852,6 +852,24 @@
 
         // 重新渲染清單
         function renderList() {
+            // 智慧排序：未採購（todo）優先排在上面，已完成（done）沉底；同狀態下按地點（Location）字元排序，未指定地點排最後
+            items.sort((a, b) => {
+                // 1. 狀態排序 (todo = -1, done = 1)
+                if (a.status === 'todo' && b.status === 'done') return -1;
+                if (a.status === 'done' && b.status === 'todo') return 1;
+                
+                // 2. 地點排序 (中文/英文排序)
+                const locA = (a.loc || "").trim();
+                const locB = (b.loc || "").trim();
+                const isDefaultA = locA === "未指定地點" || locA === "";
+                const isDefaultB = locB === "未指定地點" || locB === "";
+                
+                if (isDefaultA && !isDefaultB) return 1;
+                if (!isDefaultA && isDefaultB) return -1;
+                
+                return locA.localeCompare(locB, 'zh-Hant');
+            });
+
             const container = document.getElementById('itemsContainer');
             container.innerHTML = '';
 
