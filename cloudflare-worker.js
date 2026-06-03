@@ -87,44 +87,90 @@ export default {
         try {
           const base64String = requestData.imageFile;
 
-          // 1. 優先嘗試上傳至 Cloudflare R2
-          if (env.MY_BUCKET) {
+          // 1. 優先嘗試上傳至 GitHub (100% 免費且穩定，直接 commits 到您的儲存庫)
+          if (env.GITHUB_TOKEN) {
             try {
+              const owner = env.GITHUB_OWNER || "nondiff";
+              const repo = env.GITHUB_REPO || "korea-buy";
+              const branch = env.GITHUB_BRANCH || "main";
+              
+              const cleanBase64 = base64String.replace(/^data:image\/\w+;base64,/, "");
               const base64Parts = base64String.split(',');
               if (base64Parts.length < 2) {
                 throw new Error("Base64 資料格式不正確");
               }
               const mimeType = base64Parts[0].match(/:(.*?);/)[1];
-              const base64Data = base64Parts[1];
-              
-              // 解碼 Base64 為 Binary Uint8Array
-              const byteCharacters = atob(base64Data);
-              const byteNumbers = new Array(byteCharacters.length);
-              for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-              }
-              const byteArray = new Uint8Array(byteNumbers);
-
-              // 產生隨機且唯一的檔名
               const fileExtension = mimeType.split('/')[1] || "jpg";
               const filename = `image-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExtension}`;
 
-              // 上傳至 Cloudflare R2
-              await env.MY_BUCKET.put(filename, byteArray, {
-                httpMetadata: { contentType: mimeType }
+              const githubUrl = `https://api.github.com/repos/${owner}/${repo}/contents/images/${filename}`;
+              const githubResponse = await fetch(githubUrl, {
+                method: "PUT",
+                headers: {
+                  "Authorization": `Bearer ${env.GITHUB_TOKEN}`,
+                  "Content-Type": "application/json",
+                  "User-Agent": "Cloudflare-Worker-Korea-Buy"
+                },
+                body: JSON.stringify({
+                  message: `Upload product image ${filename} from mobile buy log`,
+                  content: cleanBase64,
+                  branch: branch
+                })
               });
 
-              // 取得目前的 Worker 網域作為公開存取連結
-              const workerOrigin = url.origin;
-              imageUrl = `${workerOrigin}/images/${filename}`;
-            } catch (r2Err) {
-              uploadErrorMessage += `Cloudflare R2 上傳失敗: ${r2Err.message || String(r2Err)}。`;
+              if (githubResponse.ok) {
+                imageUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/images/${filename}`;
+              } else {
+                const errData = await githubResponse.json().catch(() => ({}));
+                uploadErrorMessage += `GitHub 上傳失敗 (HTTP ${githubResponse.status}): ${errData.message || "未知 GitHub 錯誤"}。`;
+              }
+            } catch (gitErr) {
+              uploadErrorMessage += `GitHub 上傳過程出錯: ${gitErr.message || String(gitErr)}。`;
             }
           } else {
-            uploadErrorMessage += "未設定 R2 儲存桶 MY_BUCKET。";
+            uploadErrorMessage += "未設定環境變數 GITHUB_TOKEN。";
           }
 
-          // 2. 如果沒有 R2 或是 R2 上傳失敗，備用使用 ImgBB
+          // 2. 備用嘗試上傳至 Cloudflare R2
+          if (!imageUrl) {
+            if (env.MY_BUCKET) {
+              try {
+                const base64Parts = base64String.split(',');
+                if (base64Parts.length < 2) {
+                  throw new Error("Base64 資料格式不正確");
+                }
+                const mimeType = base64Parts[0].match(/:(.*?);/)[1];
+                const base64Data = base64Parts[1];
+                
+                // 解碼 Base64 為 Binary Uint8Array
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                  byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+
+                // 產生隨機且唯一的檔名
+                const fileExtension = mimeType.split('/')[1] || "jpg";
+                const filename = `image-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExtension}`;
+
+                // 上傳至 Cloudflare R2
+                await env.MY_BUCKET.put(filename, byteArray, {
+                  httpMetadata: { contentType: mimeType }
+                });
+
+                // 取得目前的 Worker 網域作為公開存取連結
+                const workerOrigin = url.origin;
+                imageUrl = `${workerOrigin}/images/${filename}`;
+              } catch (r2Err) {
+                uploadErrorMessage += ` Cloudflare R2 上傳失敗: ${r2Err.message || String(r2Err)}。`;
+              }
+            } else {
+              uploadErrorMessage += " 未設定 R2 儲存桶 MY_BUCKET。";
+            }
+          }
+
+          // 3. 備用使用 ImgBB
           if (!imageUrl) {
             if (env.IMGBB_API_KEY) {
               try {
@@ -155,7 +201,7 @@ export default {
             }
           }
 
-          // 3. 如果前兩者都無法取得圖片網址，備用上傳到 Catbox
+          // 4. 最後備份上傳到 Catbox
           if (!imageUrl) {
             try {
               const base64Parts = base64String.split(',');
