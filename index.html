@@ -542,9 +542,10 @@
         </div>
 
         <nav class="tabs-nav">
-            <button class="tab-btn active" onclick="switchCategory('all')">全部商品</button>
+            <button class="tab-btn active" onclick="switchCategory('all')">全部</button>
             <button class="tab-btn" onclick="switchCategory('yishan')">依姍</button>
-            <button class="tab-btn" onclick="switchCategory('co_buy')">共同必買</button>
+            <button class="tab-btn" onclick="switchCategory('ziqi')">梓綺</button>
+            <button class="tab-btn" onclick="switchCategory('guanye')">冠曄</button>
         </nav>
 
         <main class="items-grid" id="itemsContainer">
@@ -616,7 +617,8 @@
                 <div class="tile-label">✧ 類別</div>
                 <select class="edit-input" id="addCategory" style="background-color: #fff; appearance: none; -webkit-appearance: none;">
                     <option value="yishan">依姍</option>
-                    <option value="co_buy">共同必買</option>
+                    <option value="ziqi">梓綺</option>
+                    <option value="guanye">冠曄</option>
                 </select>
             </div>
 
@@ -670,7 +672,11 @@
         
         // 紀錄與動態學習 Notion 狀態與類別欄位使用的實際選項名稱
         let statusRegistry = { done: 'Done', todo: 'To do' };
-        let categoryRegistry = { yishan: 'yishan (依姍)', co_buy: 'co_buy (共同必買)' };
+        let categoryRegistry = { 
+            yishan: 'yishan (依姍)', 
+            ziqi: 'ziqi (梓綺)', 
+            guanye: 'guanye (冠曄)' 
+        };
 
         window.onload = function () {
             fetchFromNotion();
@@ -734,10 +740,13 @@
                             const options = categoryProp.select?.options || [];
                             options.forEach(opt => {
                                 const name = opt.name;
-                                if (name.toLowerCase().includes('yishan') || name.includes('依') || name.includes('姍')) {
+                                const lowerName = name.toLowerCase();
+                                if (lowerName.includes('yishan') || name.includes('依') || name.includes('姍')) {
                                     categoryRegistry.yishan = name;
-                                } else {
-                                    categoryRegistry.co_buy = name;
+                                } else if (lowerName.includes('ziqi') || name.includes('梓') || name.includes('綺')) {
+                                    categoryRegistry.ziqi = name;
+                                } else if (lowerName.includes('guanye') || name.includes('冠') || name.includes('曄')) {
+                                    categoryRegistry.guanye = name;
                                 }
                             });
                         }
@@ -766,9 +775,17 @@
                     // 1. Name 欄位
                     const name = p.Name?.title?.[0]?.plain_text || "未命名商品";
 
-                    // 2. Category 欄位：模糊比對文字，只要包含 yishan 就歸類到 yishan，否則歸到 co_buy
+                    // 2. Category 欄位：模糊比對文字分類
                     const rawCategory = p.Category?.select?.name || "yishan";
-                    const category = rawCategory.toLowerCase().includes('yishan') ? 'yishan' : 'co_buy';
+                    const rawCategoryLower = rawCategory.toLowerCase();
+                    let category = 'yishan';
+                    if (rawCategoryLower.includes('yishan') || rawCategory.includes('依') || rawCategory.includes('姍')) {
+                        category = 'yishan';
+                    } else if (rawCategoryLower.includes('ziqi') || rawCategory.includes('梓') || rawCategory.includes('綺')) {
+                        category = 'ziqi';
+                    } else if (rawCategoryLower.includes('guanye') || rawCategory.includes('冠') || rawCategory.includes('曄')) {
+                        category = 'guanye';
+                    }
 
                     // 3. Price 欄位
                     const price = p.Price?.number || 0;
