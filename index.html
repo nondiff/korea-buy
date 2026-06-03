@@ -603,7 +603,7 @@
                             const options = statusProp.status?.options || statusProp.select?.options || [];
                             options.forEach(opt => {
                                 const name = opt.name;
-                                const isDone = name.toLowerCase().includes('done') || name.includes('買') || name.includes('購') || name.includes('完');
+                                const isDone = (name.toLowerCase().includes('done') || name.includes('已') || name.includes('完')) && !name.toLowerCase().includes('todo') && !name.includes('待') && !name.includes('未');
                                 if (isDone) {
                                     statusRegistry.done = name;
                                 } else {
@@ -654,7 +654,7 @@
 
                     // 6. Status 欄位：模糊比對文字，只要包含 done 就是已買到，否則為 todo
                     const rawStatus = p.Status?.select?.name || p.Status?.status?.name || "";
-                    const isDone = rawStatus.toLowerCase().includes('done') || rawStatus.includes('買') || rawStatus.includes('購') || rawStatus.includes('完');
+                    const isDone = (rawStatus.toLowerCase().includes('done') || rawStatus.includes('已') || rawStatus.includes('完')) && !rawStatus.toLowerCase().includes('todo') && !rawStatus.includes('待') && !rawStatus.includes('未');
                     
                     if (rawStatus) {
                         if (isDone) {
