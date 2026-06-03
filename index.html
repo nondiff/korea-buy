@@ -588,7 +588,38 @@
                 </div>`;
 
             try {
-                // 呼叫安全代理 (Cloudflare Worker)
+                // 1. 先嘗試讀取資料庫結構 (Schema) 以動態取得 Status 屬性的所有選項
+                try {
+                    const schemaResponse = await fetch(WORKER_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "retrieveSchema" })
+                    });
+
+                    if (schemaResponse.ok) {
+                        const schemaData = await schemaResponse.json();
+                        const statusProp = schemaData.properties?.Status;
+                        if (statusProp) {
+                            const options = statusProp.status?.options || statusProp.select?.options || [];
+                            options.forEach(opt => {
+                                const name = opt.name;
+                                const isDone = name.toLowerCase().includes('done') || name.includes('買') || name.includes('購') || name.includes('完');
+                                if (isDone) {
+                                    statusRegistry.done = name;
+                                } else {
+                                    const isTodo = name.toLowerCase().includes('todo') || name.includes('待') || name.includes('未') || name.toLowerCase().includes('started');
+                                    if (isTodo) {
+                                        statusRegistry.todo = name;
+                                    }
+                                }
+                            });
+                        }
+                    }
+                } catch (schemaErr) {
+                    console.warn("讀取 Schema 失敗，採用預設狀態或動態學習:", schemaErr);
+                }
+
+                // 2. 呼叫安全代理 (Cloudflare Worker)
                 const response = await fetch(WORKER_URL, {
                     method: "POST"
                 });
