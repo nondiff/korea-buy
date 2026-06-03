@@ -226,6 +226,23 @@
             font-family: 'Comfortaa', sans-serif;
         }
 
+        .item-row-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            background-color: rgba(230, 225, 216, 0.35);
+            padding: 3px 6px;
+            border-radius: 6px;
+            margin-top: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            width: fit-content;
+            max-width: 100%;
+        }
+
         .check-badge {
             font-size: 18px;
             color: #C5E1A5;
@@ -1147,6 +1164,7 @@
                                 <span>📍 ${item.loc.split('/')[0].trim()}</span>
                             </div>
                             <span class="item-row-price">₩${item.price.toLocaleString()} (${twdPriceText})</span>
+                            ${item.desc ? `<div class="item-row-desc"><i class="fa-regular fa-comment-dots" style="font-size: 11px;"></i> ${item.desc}</div>` : ''}
                         </div>
                         <div class="check-badge ${isDone ? 'done' : 'todo'}" onclick="toggleStatus(event, ${index})">
                             <i class="fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle'}"></i>
