@@ -49,6 +49,14 @@ export default {
         notionUrl = `https://api.notion.com/v1/pages/${requestData.pageId}`;
         method = "PATCH";
         bodyPayload = JSON.stringify({ properties: requestData.properties });
+      } else if (requestData.action === "createPage") {
+        // 新增資料庫頁面 (POST)
+        notionUrl = `https://api.notion.com/v1/pages`;
+        method = "POST";
+        bodyPayload = JSON.stringify({
+          parent: { database_id: databaseId },
+          properties: requestData.properties
+        });
       } else if (requestData.action === "retrieveSchema") {
         // 取得資料庫綱要 (GET)
         notionUrl = `https://api.notion.com/v1/databases/${databaseId}`;
