@@ -775,6 +775,12 @@
         };
 
         window.onload = function () {
+            // 從 localStorage 載入已儲存的匯率，如果沒有則預設為 48
+            const savedRate = localStorage.getItem('twdRate');
+            if (savedRate) {
+                document.getElementById('twdRate').value = savedRate;
+            }
+
             fetchFromNotion();
             
             // 綁定價格輸入即時換算
@@ -984,6 +990,9 @@
         }
 
         function calculateAllPrices() {
+            const rateInput = document.getElementById('twdRate');
+            const rate = parseFloat(rateInput.value) || 48;
+            localStorage.setItem('twdRate', rate); // 儲存使用者自訂的匯率
             renderList();
         }
 
