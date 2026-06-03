@@ -266,13 +266,17 @@
             z-index: 100;
             display: none;
             justify-content: center;
-            align-items: center;
-            padding: 16px;
+            align-items: flex-start; /* 頂部對齊以利於滾動 */
+            padding: 24px 16px;
+            overflow-y: auto; /* 啟用垂直滾動 */
+            -webkit-overflow-scrolling: touch; /* 讓 iOS 滑動更順暢 */
         }
 
         .modal-card {
             width: 100%;
             max-width: 410px;
+            margin-top: auto;
+            margin-bottom: auto; /* 在畫面高度足夠時垂直置中 */
             background-color: var(--card-bg);
             border-radius: 40px;
             /* 超高質感大圓角 */
