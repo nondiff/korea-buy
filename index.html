@@ -429,7 +429,7 @@
                 <span>目前匯率 (1 TWD 可換)</span>
             </div>
             <div class="rate-input-container">
-                <input type="number" id="twdRate" value="42" min="1" oninput="calculateAllPrices()">
+                <input type="number" id="twdRate" value="48" min="1" oninput="calculateAllPrices()">
                 <span style="font-size:13px; font-weight:700;">KRW</span>
             </div>
         </div>
@@ -566,7 +566,7 @@
             const container = document.getElementById('itemsContainer');
             container.innerHTML = '';
 
-            const rate = parseFloat(document.getElementById('twdRate').value) || 42;
+            const rate = parseFloat(document.getElementById('twdRate').value) || 48;
 
             items.forEach((item, index) => {
                 if (currentFilter !== 'all' && item.category !== currentFilter) return;
@@ -606,7 +606,7 @@
 
         function openDetail(index) {
             const item = items[index];
-            const rate = parseFloat(document.getElementById('twdRate').value) || 42;
+            const rate = parseFloat(document.getElementById('twdRate').value) || 48;
             const twdPrice = Math.round(item.price / rate);
 
             document.getElementById('modalName').innerText = item.name;
