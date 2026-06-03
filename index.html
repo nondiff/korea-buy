@@ -580,13 +580,19 @@
                 <textarea class="edit-textarea" id="modalDescInput" placeholder="請輸入備註或說明..."></textarea>
             </div>
 
-            <div class="detail-tile-box price-box">
-                <div class="tile-label">價格 (KRW ₩)</div>
-                <div style="display:flex; align-items:center; gap:8px; width:100%;">
-                    <span style="font-family:'Comfortaa', sans-serif; font-weight:700; color:var(--text-muted); font-size:16px;">₩</span>
-                    <input type="number" class="edit-input" id="modalPriceInput" style="font-family:'Comfortaa', sans-serif; font-weight:700;" placeholder="0" min="0">
+            <div style="display: flex; gap: 12px; width: 100%;">
+                <div class="detail-tile-box price-box" style="flex: 2; margin-bottom: 0;">
+                    <div class="tile-label">價格 (KRW ₩)</div>
+                    <div style="display:flex; align-items:center; gap:8px; width:100%;">
+                        <span style="font-family:'Comfortaa', sans-serif; font-weight:700; color:var(--text-muted); font-size:16px;">₩</span>
+                        <input type="number" class="edit-input" id="modalPriceInput" style="font-family:'Comfortaa', sans-serif; font-weight:700;" placeholder="0" min="0">
+                    </div>
+                    <div class="modal-hint-text" id="modalTwdPriceHint" style="margin-top:6px; font-weight:700; color:var(--accent-color);">約 NT$ 0</div>
                 </div>
-                <div class="modal-hint-text" id="modalTwdPriceHint" style="margin-top:6px; font-weight:700; color:var(--accent-color);">約 NT$ 0</div>
+                <div class="detail-tile-box" style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; margin-bottom: 0;">
+                    <div class="tile-label">數量</div>
+                    <input type="number" class="edit-input" id="modalQuantityInput" style="font-family:'Comfortaa', sans-serif; font-weight:700; text-align:center; padding: 10px 4px;" value="1" min="1" step="1">
+                </div>
             </div>
 
             <div class="detail-tile-box location-box">
@@ -639,13 +645,19 @@
                 </div>
             </div>
 
-            <div class="detail-tile-box price-box">
-                <div class="tile-label">價格 (KRW ₩)</div>
-                <div style="display:flex; align-items:center; gap:8px; width:100%;">
-                    <span style="font-family:'Comfortaa', sans-serif; font-weight:700; color:var(--text-muted); font-size:16px;">₩</span>
-                    <input type="number" class="edit-input" id="addPrice" style="font-family:'Comfortaa', sans-serif; font-weight:700;" placeholder="0" min="0">
+            <div style="display: flex; gap: 12px; width: 100%;">
+                <div class="detail-tile-box price-box" style="flex: 2; margin-bottom: 0;">
+                    <div class="tile-label">價格 (KRW ₩)</div>
+                    <div style="display:flex; align-items:center; gap:8px; width:100%;">
+                        <span style="font-family:'Comfortaa', sans-serif; font-weight:700; color:var(--text-muted); font-size:16px;">₩</span>
+                        <input type="number" class="edit-input" id="addPrice" style="font-family:'Comfortaa', sans-serif; font-weight:700;" placeholder="0" min="0">
+                    </div>
+                    <div class="modal-hint-text" id="addTwdPriceHint" style="margin-top:6px; font-weight:700; color:var(--accent-color);">約 NT$ 0</div>
                 </div>
-                <div class="modal-hint-text" id="addTwdPriceHint" style="margin-top:6px; font-weight:700; color:var(--accent-color);">約 NT$ 0</div>
+                <div class="detail-tile-box" style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; margin-bottom: 0;">
+                    <div class="tile-label">數量</div>
+                    <input type="number" class="edit-input" id="addQuantity" style="font-family:'Comfortaa', sans-serif; font-weight:700; text-align:center; padding: 10px 4px;" value="1" min="1" step="1">
+                </div>
             </div>
 
             <div class="detail-tile-box">
@@ -823,7 +835,7 @@
                         img = files[0].file?.url || files[0].external?.url || img;
                     }
 
-                    return { id: page.id, category, name, price, status, statusType, loc, desc, img };
+                    return { id: page.id, category, name, price, quantity: p.Quantity?.number || 1, status, statusType, loc, desc, img };
                 });
 
                 renderList();
@@ -855,7 +867,7 @@
                     <div class="item-row-card" onclick="openDetail(${index})">
                         <img class="item-row-img" src="${item.img}" alt="${item.name}">
                         <div class="item-row-info">
-                            <span class="item-row-name">${item.name}</span>
+                            <span class="item-row-name">${item.name} <span style="color:var(--accent-color); font-size:13px; font-weight:700; margin-left: 4px;">x${item.quantity || 1}</span></span>
                             <div class="item-row-meta">
                                 <span>📍 ${item.loc.split('/')[0].trim()}</span>
                             </div>
@@ -943,6 +955,7 @@
             document.getElementById('modalImg').src = item.img;
             document.getElementById('modalDescInput').value = item.desc;
             document.getElementById('modalPriceInput').value = item.price;
+            document.getElementById('modalQuantityInput').value = item.quantity || 1;
             document.getElementById('modalLoc').innerText = item.loc;
 
             // 即時計算台幣提示
@@ -963,6 +976,7 @@
             const saveBtn = document.getElementById('modalSaveBtn');
             
             const newPrice = parseFloat(document.getElementById('modalPriceInput').value) || 0;
+            const newQuantity = parseInt(document.getElementById('modalQuantityInput').value) || 1;
             const newDesc = document.getElementById('modalDescInput').value.trim();
 
             // 鎖定按鈕並顯示載入中
@@ -971,6 +985,7 @@
 
             const properties = {
                 "Price": { "number": newPrice },
+                "Quantity": { "number": newQuantity },
                 "Description": {
                     "rich_text": [
                         {
@@ -1000,6 +1015,7 @@
 
                 // 更新成功後修改本地狀態並重繪
                 item.price = newPrice;
+                item.quantity = newQuantity;
                 item.desc = newDesc;
                 renderList();
                 closeModal();
@@ -1029,6 +1045,7 @@
             document.getElementById('addName').value = '';
             document.getElementById('addCategory').value = 'yishan';
             document.getElementById('addPrice').value = '';
+            document.getElementById('addQuantity').value = '1';
             document.getElementById('addDesc').value = '';
             document.getElementById('addLoc').value = '';
             document.getElementById('addTwdPriceHint').innerText = '約 NT$ 0';
@@ -1116,6 +1133,7 @@
             const name = document.getElementById('addName').value.trim();
             const categoryKey = document.getElementById('addCategory').value;
             const price = parseFloat(document.getElementById('addPrice').value) || 0;
+            const quantity = parseInt(document.getElementById('addQuantity').value) || 1;
             const desc = document.getElementById('addDesc').value.trim();
             const loc = document.getElementById('addLoc').value.trim();
             
@@ -1155,6 +1173,9 @@
                 },
                 "Price": {
                     "number": price
+                },
+                "Quantity": {
+                    "number": quantity
                 },
                 "Description": {
                     "rich_text": [
