@@ -230,10 +230,26 @@
             font-size: 18px;
             color: #C5E1A5;
             margin-left: auto;
+            cursor: pointer;
+            padding: 8px;
+            margin-right: -8px;
+            transition: transform 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .check-badge:active {
+            transform: scale(0.85);
         }
 
         .check-badge.todo {
             color: #E0DDD5;
+        }
+
+        .check-badge.updating {
+            color: var(--text-muted);
+            pointer-events: none;
         }
 
         /* ==========================================================================
@@ -409,6 +425,61 @@
             cursor: pointer;
             padding: 5px 10px;
         }
+
+        /* 編輯與按鈕樣式 */
+        .edit-input, .edit-textarea {
+            width: 100%;
+            border: 1px solid var(--border-light);
+            background-color: #fff;
+            border-radius: 12px;
+            padding: 10px 12px;
+            font-size: 14px;
+            color: var(--text-main);
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .edit-input:focus, .edit-textarea:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(208, 106, 88, 0.15);
+        }
+        .edit-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .save-btn {
+            background-color: var(--accent-color);
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(208, 106, 88, 0.2);
+            width: 100%;
+            margin-top: 10px;
+        }
+        .save-btn:hover {
+            background-color: #b95645;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(208, 106, 88, 0.3);
+        }
+        .save-btn:active {
+            transform: translateY(0);
+        }
+        .save-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
     </style>
 </head>
 
@@ -449,7 +520,7 @@
             <div class="modal-header">
                 <div class="modal-title-group">
                     <span class="modal-title" id="modalName">---</span>
-                    <span class="modal-subtitle">商品詳情</span>
+                    <span class="modal-subtitle">編輯商品資訊</span>
                 </div>
                 <button class="modal-close-btn" onclick="closeModal()">×</button>
             </div>
@@ -459,13 +530,17 @@
             </div>
 
             <div class="detail-tile-box">
-                <div class="tile-label">✧ 簡介</div>
-                <div class="tile-value" id="modalDesc">---</div>
+                <div class="tile-label">✧ 備註說明</div>
+                <textarea class="edit-textarea" id="modalDescInput" placeholder="請輸入備註或說明..."></textarea>
             </div>
 
             <div class="detail-tile-box price-box">
-                <div class="tile-label">價格</div>
-                <div class="price-value" id="modalPrice">---</div>
+                <div class="tile-label">價格 (KRW ₩)</div>
+                <div style="display:flex; align-items:center; gap:8px; width:100%;">
+                    <span style="font-family:'Comfortaa', sans-serif; font-weight:700; color:var(--text-muted); font-size:16px;">₩</span>
+                    <input type="number" class="edit-input" id="modalPriceInput" style="font-family:'Comfortaa', sans-serif; font-weight:700;" placeholder="0" min="0">
+                </div>
+                <div class="modal-hint-text" id="modalTwdPriceHint" style="margin-top:6px; font-weight:700; color:var(--accent-color);">約 NT$ 0</div>
             </div>
 
             <div class="detail-tile-box location-box">
@@ -473,23 +548,25 @@
                 <div class="location-value" id="modalLoc">---</div>
             </div>
 
-            <div class="modal-hint-text">點擊空白處或上方關閉返回列表</div>
-        </div>
-    </div>
-
-    <script>
-        /* ==========================================================================
-           7. Notion API 即時連線控制核心 (已適應 2026 最新欄位配置)
-           ========================================================================== */
-
-        // 🔗 您的 Cloudflare Worker 代理網址（部署完 Worker 後請在此填入您的 Worker 網址）
-        const WORKER_URL = "https://seoul-buy-proxy.caici1314520.workers.dev/";
-
-        let items = [];
+            <button class="save-btn" id="modalSaveBtn" onclick="saveItemChanges()">
+                <i class="fa-solid fa-cloud-arrow-up"></i> 儲存變更
+               let items = [];
         let currentFilter = 'all';
+        let editingIndex = null;
+        
+        // 紀錄與動態學習 Notion 狀態欄位使用的實際字串名稱 (支援中英文)
+        let statusRegistry = { done: 'Done', todo: 'To do' };
 
         window.onload = function () {
             fetchFromNotion();
+            
+            // 綁定價格輸入即時換算
+            document.getElementById('modalPriceInput').oninput = function () {
+                const rate = parseFloat(document.getElementById('twdRate').value) || 48;
+                const krw = parseFloat(this.value) || 0;
+                const twd = Math.round(krw / rate);
+                document.getElementById('modalTwdPriceHint').innerText = `約 NT$ ${twd.toLocaleString()}`;
+            };
         };
 
         // 向 Notion 撈取最新資料
@@ -532,11 +609,22 @@
                     const loc = p.Location?.rich_text?.[0]?.plain_text || "未指定地點";
 
                     // 5. Description 欄位
-                    const desc = p.Description?.rich_text?.[0]?.plain_text || "暫無備註說明。";
+                    const desc = p.Description?.rich_text?.[0]?.plain_text || "";
 
-                    // 6. Status 欄位：模糊比對文字，只要包含 done 就是已买到，否則為 todo
-                    const rawStatus = p.Status?.select?.name || p.Status?.status?.name || "todo";
-                    const status = rawStatus.toLowerCase().includes('done') ? 'done' : 'todo';
+                    // 6. Status 欄位：模糊比對文字，只要包含 done 就是已買到，否則為 todo
+                    const rawStatus = p.Status?.select?.name || p.Status?.status?.name || "";
+                    const isDone = rawStatus.toLowerCase().includes('done') || rawStatus.includes('買') || rawStatus.includes('購') || rawStatus.includes('完');
+                    
+                    if (rawStatus) {
+                        if (isDone) {
+                            statusRegistry.done = rawStatus;
+                        } else {
+                            statusRegistry.todo = rawStatus;
+                        }
+                    }
+                    
+                    const status = isDone ? 'done' : 'todo';
+                    const statusType = p.Status?.type || 'select';
 
                     // 7. Image 欄位 (處理 Notion Files & media 類型的圖片連結)
                     let img = "https://placehold.co/100x100?text=No+Image";
@@ -546,7 +634,7 @@
                         img = files[0].file?.url || files[0].external?.url || img;
                     }
 
-                    return { category, name, price, status, loc, desc, img };
+                    return { id: page.id, category, name, price, status, statusType, loc, desc, img };
                 });
 
                 renderList();
@@ -584,7 +672,7 @@
                             </div>
                             <span class="item-row-price">₩${item.price.toLocaleString()} (約 NT$ ${twdPrice})</span>
                         </div>
-                        <div class="check-badge ${isDone ? 'done' : 'todo'}">
+                        <div class="check-badge ${isDone ? 'done' : 'todo'}" onclick="toggleStatus(event, ${index})">
                             <i class="fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle'}"></i>
                         </div>
                     </div>
@@ -604,29 +692,140 @@
             renderList();
         }
 
+        // 即時切換已採購狀態
+        async function toggleStatus(event, index) {
+            event.stopPropagation(); // 阻止觸發打開 Modal
+
+            const item = items[index];
+            const badge = event.currentTarget;
+            
+            // 防止重複點擊
+            if (badge.classList.contains('updating')) return;
+            badge.classList.add('updating');
+            
+            const originalIcon = badge.innerHTML;
+            badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            const nextStatus = item.status === 'done' ? 'todo' : 'done';
+            const targetStatusName = statusRegistry[nextStatus];
+
+            // 根據 Notion 欄位類型包裝屬性
+            const properties = {
+                "Status": item.statusType === 'status' 
+                    ? { "status": { "name": targetStatusName } } 
+                    : { "select": { "name": targetStatusName } }
+            };
+
+            try {
+                const response = await fetch(WORKER_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        action: "update",
+                        pageId: item.id,
+                        properties: properties
+                    })
+                });
+
+                if (!response.ok) throw new Error("更新狀態失敗");
+
+                // 更新成功後修改本地狀態並重繪
+                item.status = nextStatus;
+                renderList();
+            } catch (error) {
+                console.error("更新狀態出錯:", error);
+                alert("更新狀態失敗，請確認 Notion 權限或網路連線！");
+                // 還原圖示
+                badge.classList.remove('updating');
+                badge.innerHTML = originalIcon;
+            }
+        }
+
         function openDetail(index) {
+            editingIndex = index;
             const item = items[index];
             const rate = parseFloat(document.getElementById('twdRate').value) || 48;
             const twdPrice = Math.round(item.price / rate);
 
             document.getElementById('modalName').innerText = item.name;
             document.getElementById('modalImg').src = item.img;
-            document.getElementById('modalDesc').innerText = item.desc;
-            document.getElementById('modalPrice').innerText = `₩${item.price.toLocaleString()} (約 NT$ ${twdPrice})`;
+            document.getElementById('modalDescInput').value = item.desc;
+            document.getElementById('modalPriceInput').value = item.price;
             document.getElementById('modalLoc').innerText = item.loc;
+
+            // 即時計算台幣提示
+            document.getElementById('modalTwdPriceHint').innerText = `約 NT$ ${twdPrice.toLocaleString()}`;
+            
+            // 重設儲存按鈕狀態
+            const saveBtn = document.getElementById('modalSaveBtn');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 儲存變更';
 
             document.getElementById('detailModal').style.display = 'flex';
         }
 
+        // 儲存修改的價格與備註
+        async function saveItemChanges() {
+            if (editingIndex === null) return;
+            const item = items[editingIndex];
+            const saveBtn = document.getElementById('modalSaveBtn');
+            
+            const newPrice = parseFloat(document.getElementById('modalPriceInput').value) || 0;
+            const newDesc = document.getElementById('modalDescInput').value.trim();
+
+            // 鎖定按鈕並顯示載入中
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在儲存...';
+
+            const properties = {
+                "Price": { "number": newPrice },
+                "Description": {
+                    "rich_text": [
+                        {
+                            "text": {
+                                "content": newDesc
+                            }
+                        }
+                    ]
+                }
+            };
+
+            try {
+                const response = await fetch(WORKER_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        action: "update",
+                        pageId: item.id,
+                        properties: properties
+                    })
+                });
+
+                if (!response.ok) throw new Error("儲存修改失敗");
+
+                // 更新成功後修改本地狀態並重繪
+                item.price = newPrice;
+                item.desc = newDesc;
+                renderList();
+                closeModal();
+            } catch (error) {
+                console.error("儲存修改出錯:", error);
+                alert("儲存修改失敗，請確認 Notion 權限或網路連線！");
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 儲存變更';
+            }
+        }
+
         function closeModal() {
             document.getElementById('detailModal').style.display = 'none';
+            editingIndex = null;
         }
 
         function closeModalOnOuter(event) {
             if (event.target === document.getElementById('detailModal')) {
                 closeModal();
             }
-        }
+
     </script>
 </body>
 

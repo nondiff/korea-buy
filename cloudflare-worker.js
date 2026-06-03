@@ -32,15 +32,39 @@ export default {
     }
 
     try {
-      // 呼叫 Notion 官方 API 讀取資料
-      const notionUrl = `https://api.notion.com/v1/databases/${databaseId}/query`;
+      // 嘗試解析 JSON 請求體
+      let requestData = {};
+      try {
+        requestData = await request.json();
+      } catch (e) {
+        // 請求體非 JSON 或為空
+      }
+
+      let notionUrl;
+      let method;
+      let bodyPayload;
+
+      // 如果請求包含 action: "update" 與 pageId，則進行頁面屬性修改 (PATCH)
+      if (requestData.action === "update" && requestData.pageId) {
+        notionUrl = `https://api.notion.com/v1/pages/${requestData.pageId}`;
+        method = "PATCH";
+        bodyPayload = JSON.stringify({ properties: requestData.properties });
+      } else {
+        // 否則預設為查詢資料庫 (POST)
+        notionUrl = `https://api.notion.com/v1/databases/${databaseId}/query`;
+        method = "POST";
+        bodyPayload = requestData.query ? JSON.stringify(requestData.query) : undefined;
+      }
+
+      // 呼叫 Notion 官方 API
       const response = await fetch(notionUrl, {
-        method: "POST",
+        method: method,
         headers: {
           "Authorization": `Bearer ${token}`,
           "Notion-Version": "2022-06-28",
           "Content-Type": "application/json"
-        }
+        },
+        body: bodyPayload
       });
 
       const data = await response.json();
