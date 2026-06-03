@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🇰🇷 韓國連線採購誌</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        /* ==========================================================================
+           1. 全域樣式與配色定義 (暖系日韓雜貨風，100%致敬截圖高質感)
+           ========================================================================== */
+        :root {
+            --bg-color: #121212;
+            /* 仿 iOS 暗色背景底色 */
+            --app-bg: #F5F2EB;
+            /* 主體暖奶油色背景 */
+            --card-bg: #FAF8F5;
+            /* 卡片純淨暖白色 */
+            --text-main: #3C2F2F;
+            /* 深可可色（取代死黑，提升質感） */
+            --text-muted: #8A7A71;
+            /* 灰褐輔助色 */
+            --accent-color: #D06A58;
+            /* 珊瑚橘紅點綴色 */
+            --border-light: #E6E1D8;
+            /* 淺灰色邊框 */
+            --shadow-soft: 0 8px 24px rgba(60, 47, 47, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* 限制手機版最佳寬度 */
+        .phone-wrapper {
+            width: 100%;
+            max-width: 480px;
+            background-color: var(--app-bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            padding: 20px 16px 100px 16px;
+            overflow-x: hidden;
+        }
+
+        /* ==========================================================================
+           2. 頁首與頂部匯率區
+           ========================================================================== */
+        .app-header {
+            text-align: center;
+            padding: 24px 0 16px 0;
+        }
+
+        .app-header h1 {
+            font-family: 'Comfortaa', 'Noto Sans TC', sans-serif;
+            font-size: 26px;
+            margin: 0 0 6px 0;
+            color: var(--text-main);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .app-header p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0;
+            letter-spacing: 0.5px;
+        }
+
+        .exchange-widget {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-soft);
+            border: 1px solid var(--border-light);
+            margin-bottom: 20px;
+        }
+
+        .exchange-widget .rate-title {
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .exchange-widget .rate-input-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .exchange-widget input {
+            width: 60px;
+            border: 1px solid var(--border-light);
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 4px 8px;
+            text-align: center;
+            font-size: 15px;
+            font-family: 'Comfortaa', sans-serif;
+            color: var(--text-main);
+            outline: none;
+            font-weight: 700;
+        }
+
+        /* ==========================================================================
+           3. 分頁與篩選器 (Tabs)
+           ========================================================================== */
+        .tabs-nav {
+            display: flex;
+            background-color: #E6E1D8;
+            padding: 4px;
+            border-radius: 14px;
+            margin-bottom: 18px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            border: none;
+            background: none;
+            padding: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-muted);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .tab-btn.active {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        /* ==========================================================================
+           4. 商品清單卡片展示 (Dashboard List)
+           ========================================================================== */
+        .items-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .item-row-card {
+            background-color: var(--card-bg);
+            border-radius: 18px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-soft);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .item-row-card:active {
+            transform: scale(0.98);
+        }
+
+        .item-row-img {
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1px solid var(--border-light);
+            background-color: #fff;
+        }
+
+        .item-row-info {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .item-row-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-row-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            gap: 10px;
+        }
+
+        .item-row-price {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent-color);
+            font-family: 'Comfortaa', sans-serif;
+        }
+
+        .check-badge {
+            font-size: 18px;
+            color: #C5E1A5;
+            margin-left: auto;
+        }
+
+        .check-badge.todo {
+            color: #E0DDD5;
+        }
+
+        /* ==========================================================================
+           5. 彈出式詳情視窗 (Detail Modal - 精準復刻自 image_9c4e3a.jpg)
+           ========================================================================== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(18, 18, 18, 0.85);
+            /* 仿 iOS 磨砂黑背景 */
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 410px;
+            background-color: var(--card-bg);
+            border-radius: 40px;
+            /* 超高質感大圓角 */
+            padding: 30px;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                transform: scale(0.9) translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .modal-title-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            max-width: 85%;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.3;
+        }
+
+        .modal-subtitle {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .modal-close-btn {
+            border: none;
+            background: none;
+            font-size: 22px;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .modal-close-btn:hover {
+            color: var(--accent-color);
+        }
+
+        /* 100% 復刻：精緻灰色虛線相框 */
+        .modal-img-container {
+            border: 2px dashed #E0DCD5;
+            border-radius: 28px;
+            padding: 12px;
+            background-color: #FFF;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 240px;
+        }
+
+        .modal-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 16px;
+        }
+
+        /* 資訊專屬白色獨立區塊 */
+        .detail-tile-box {
+            background-color: #FAF8F5;
+            border-radius: 18px;
+            padding: 14px 18px;
+            border: 1px solid rgba(230, 225, 216, 0.5);
+        }
+
+        .tile-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .tile-value {
+            font-size: 14px;
+            color: var(--text-main);
+            line-height: 1.5;
+            text-align: left;
+        }
+
+        /* 價格特化樣式 */
+        .price-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .price-value {
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'Comfortaa', sans-serif;
+            color: var(--text-main);
+        }
+
+        /* 地點特化樣式 */
+        .location-box {
+            text-align: center;
+        }
+
+        .location-value {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+            text-align: center;
+        }
+
+        .modal-hint-text {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            text-align: center;
+            letter-spacing: 0.5px;
+            margin-top: 5px;
+        }
+
+        .refresh-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="phone-wrapper">
+        <header class="app-header">
+            <h1>🇰🇷 Seoul Buy Log</h1>
+            <p>2026 韓國採購清單 & 即時連線</p>
+            <button class="refresh-btn" onclick="fetchFromNotion()">
+                <i class="fa-solid fa-arrows-rotate"></i> 點此手動重整同步
+            </button>
+        </header>
+
+        <div class="exchange-widget">
+            <div class="rate-title">
+                <i class="fa-solid fa-calculator" style="color: var(--accent-color)"></i>
+                <span>目前匯率 (1 TWD 可換)</span>
+            </div>
+            <div class="rate-input-container">
+                <input type="number" id="twdRate" value="42" min="1" oninput="calculateAllPrices()">
+                <span style="font-size:13px; font-weight:700;">KRW</span>
+            </div>
+        </div>
+
+        <nav class="tabs-nav">
+            <button class="tab-btn active" onclick="switchCategory('all')">全部商品</button>
+            <button class="tab-btn" onclick="switchCategory('yishan')">依姍</button>
+            <button class="tab-btn" onclick="switchCategory('co_buy')">共同必買</button>
+        </nav>
+
+        <main class="items-grid" id="itemsContainer">
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="detailModal" onclick="closeModalOnOuter(event)">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-title" id="modalName">---</span>
+                    <span class="modal-subtitle">商品詳情</span>
+                </div>
+                <button class="modal-close-btn" onclick="closeModal()">×</button>
+            </div>
+
+            <div class="modal-img-container">
+                <img class="modal-img" id="modalImg" src="" alt="商品圖片">
+            </div>
+
+            <div class="detail-tile-box">
+                <div class="tile-label">✧ 簡介</div>
+                <div class="tile-value" id="modalDesc">---</div>
+            </div>
+
+            <div class="detail-tile-box price-box">
+                <div class="tile-label">價格</div>
+                <div class="price-value" id="modalPrice">---</div>
+            </div>
+
+            <div class="detail-tile-box location-box">
+                <div class="tile-label">地點</div>
+                <div class="location-value" id="modalLoc">---</div>
+            </div>
+
+            <div class="modal-hint-text">點擊空白處或上方關閉返回列表</div>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           7. Notion API 即時連線控制核心 (已適應 2026 最新欄位配置)
+           ========================================================================== */
+
+        // 🔗 您的 Cloudflare Worker 代理網址（部署完 Worker 後請在此填入您的 Worker 網址）
+        const WORKER_URL = "https://seoul-buy-proxy.caici1314520.workers.dev/";
+
+        let items = [];
+        let currentFilter = 'all';
+
+        window.onload = function () {
+            fetchFromNotion();
+        };
+
+        // 向 Notion 撈取最新資料
+        async function fetchFromNotion() {
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = `
+                <div style="text-align:center; padding:40px; color:var(--text-muted); font-size:14px;">
+                    <i class="fa-solid fa-arrows-rotate fa-spin"></i> 正在連線讀取 Notion 資料庫...
+                </div>`;
+
+            try {
+                // 呼叫安全代理 (Cloudflare Worker)
+                const response = await fetch(WORKER_URL, {
+                    method: "POST"
+                });
+
+                if (!response.ok) throw new Error("代理伺服器連線異常");
+
+                const notionData = await response.json();
+
+                if (!notionData.results) {
+                    throw new Error("找不到資料");
+                }
+
+                // 100% 對齊妳截圖中的 Notion 實際欄位名稱
+                items = notionData.results.map(page => {
+                    const p = page.properties;
+
+                    // 1. Name 欄位
+                    const name = p.Name?.title?.[0]?.plain_text || "未命名商品";
+
+                    // 2. Category 欄位：模糊比對文字，只要包含 yishan 就歸類到 yishan，否則歸到 co_buy
+                    const rawCategory = p.Category?.select?.name || "yishan";
+                    const category = rawCategory.toLowerCase().includes('yishan') ? 'yishan' : 'co_buy';
+
+                    // 3. Price 欄位
+                    const price = p.Price?.number || 0;
+
+                    // 4. Location 欄位
+                    const loc = p.Location?.rich_text?.[0]?.plain_text || "未指定地點";
+
+                    // 5. Description 欄位
+                    const desc = p.Description?.rich_text?.[0]?.plain_text || "暫無備註說明。";
+
+                    // 6. Status 欄位：模糊比對文字，只要包含 done 就是已买到，否則為 todo
+                    const rawStatus = p.Status?.select?.name || p.Status?.status?.name || "todo";
+                    const status = rawStatus.toLowerCase().includes('done') ? 'done' : 'todo';
+
+                    // 7. Image 欄位 (處理 Notion Files & media 類型的圖片連結)
+                    let img = "https://placehold.co/100x100?text=No+Image";
+                    const files = p.Image?.files;
+                    if (files && files.length > 0) {
+                        // 優先拿外部上傳連結或是 Notion 本地託管連結
+                        img = files[0].file?.url || files[0].external?.url || img;
+                    }
+
+                    return { category, name, price, status, loc, desc, img };
+                });
+
+                renderList();
+
+            } catch (error) {
+                console.error("Notion 同步出錯:", error);
+                container.innerHTML = `
+                    <div style="text-align:center; padding:30px; color:var(--accent-color); font-size:13px;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> 同步失敗<br>
+                        <span style="font-size:11px; opacity:0.7;">請檢查 Notion 頁面右上角是否已添加 Connection 授權。</span>
+                    </div>`;
+            }
+        }
+
+        // 重新渲染清單
+        function renderList() {
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = '';
+
+            const rate = parseFloat(document.getElementById('twdRate').value) || 42;
+
+            items.forEach((item, index) => {
+                if (currentFilter !== 'all' && item.category !== currentFilter) return;
+
+                const twdPrice = Math.round(item.price / rate);
+                const isDone = item.status === 'done';
+
+                const cardHtml = `
+                    <div class="item-row-card" onclick="openDetail(${index})">
+                        <img class="item-row-img" src="${item.img}" alt="${item.name}">
+                        <div class="item-row-info">
+                            <span class="item-row-name">${item.name}</span>
+                            <div class="item-row-meta">
+                                <span>📍 ${item.loc.split('/')[0].trim()}</span>
+                            </div>
+                            <span class="item-row-price">₩${item.price.toLocaleString()} (約 NT$ ${twdPrice})</span>
+                        </div>
+                        <div class="check-badge ${isDone ? 'done' : 'todo'}">
+                            <i class="fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle'}"></i>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHtml;
+            });
+        }
+
+        function calculateAllPrices() {
+            renderList();
+        }
+
+        function switchCategory(category) {
+            currentFilter = category;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderList();
+        }
+
+        function openDetail(index) {
+            const item = items[index];
+            const rate = parseFloat(document.getElementById('twdRate').value) || 42;
+            const twdPrice = Math.round(item.price / rate);
+
+            document.getElementById('modalName').innerText = item.name;
+            document.getElementById('modalImg').src = item.img;
+            document.getElementById('modalDesc').innerText = item.desc;
+            document.getElementById('modalPrice').innerText = `₩${item.price.toLocaleString()} (約 NT$ ${twdPrice})`;
+            document.getElementById('modalLoc').innerText = item.loc;
+
+            document.getElementById('detailModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        function closeModalOnOuter(event) {
+            if (event.target === document.getElementById('detailModal')) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+
+</html>
