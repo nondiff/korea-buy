@@ -520,6 +520,84 @@
                 right: calc(50% - 224px);
             }
         }
+
+        /* ==========================================================================
+           10. 頂部即時消費摘要欄 (統計看板)
+           ========================================================================== */
+        .summary-widget {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 14px 16px;
+            box-shadow: var(--shadow-soft);
+            border: 1px solid var(--border-light);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .summary-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .summary-col:not(:last-child) {
+            border-right: 1px solid var(--border-light);
+        }
+        .summary-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .summary-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+            font-family: 'Comfortaa', 'Noto Sans TC', sans-serif;
+        }
+        .summary-value.accent {
+            color: var(--accent-color);
+        }
+        .summary-divider {
+            height: 1px;
+            background-color: var(--border-light);
+            width: 100%;
+        }
+        .person-breakdown {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            gap: 8px;
+        }
+        .person-card {
+            flex: 1;
+            background-color: #FAF8F5;
+            border-radius: 10px;
+            padding: 6px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid rgba(230, 225, 216, 0.5);
+        }
+        .person-name {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+        .person-price {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-main);
+            font-family: 'Comfortaa', sans-serif;
+        }
     </style>
 </head>
 
@@ -544,6 +622,8 @@
                 <span style="font-size:13px; font-weight:700;">KRW</span>
             </div>
         </div>
+
+        <div class="summary-widget" id="summaryWidget"></div>
 
         <nav class="tabs-nav">
             <button class="tab-btn active" onclick="switchCategory('all')">全部</button>
@@ -898,6 +978,9 @@
                 `;
                 container.innerHTML += cardHtml;
             });
+
+            // 更新統計看板
+            updateSummary();
         }
 
         function calculateAllPrices() {
@@ -1251,6 +1334,98 @@
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-plus"></i> 新增商品到 Notion';
             }
+        }
+
+        // 計算並更新統計看板 (消費進度、總花費、未買預算、個人分帳)
+        function updateSummary() {
+            const summaryWidget = document.getElementById('summaryWidget');
+            if (!summaryWidget) return;
+
+            const rate = parseFloat(document.getElementById('twdRate').value) || 48;
+
+            let totalQty = 0;
+            let doneQty = 0;
+            let totalSpentKrw = 0;
+            let totalTodoKrw = 0;
+
+            let yishanSpent = 0;
+            let ziqiSpent = 0;
+            let guanyeSpent = 0;
+
+            items.forEach(item => {
+                const qty = item.quantity || 1;
+                totalQty += qty;
+                
+                const itemCost = item.price * qty;
+
+                if (item.status === 'done') {
+                    doneQty += qty;
+                    totalSpentKrw += itemCost;
+                    
+                    if (item.category === 'yishan') {
+                        yishanSpent += itemCost;
+                    } else if (item.category === 'ziqi') {
+                        ziqiSpent += itemCost;
+                    } else if (item.category === 'guanye') {
+                        guanyeSpent += itemCost;
+                    }
+                } else {
+                    totalTodoKrw += itemCost;
+                }
+            });
+
+            const totalSpentTwd = Math.round(totalSpentKrw / rate);
+            const totalTodoTwd = Math.round(totalTodoKrw / rate);
+
+            const yishanTwd = Math.round(yishanSpent / rate);
+            const ziqiTwd = Math.round(ziqiSpent / rate);
+            const guanyeTwd = Math.round(guanyeSpent / rate);
+
+            summaryWidget.innerHTML = `
+                <!-- 全域指標 -->
+                <div class="summary-row">
+                    <div class="summary-col">
+                        <span class="summary-label">📊 採購進度</span>
+                        <span class="summary-value accent">${doneQty} / ${totalQty} 件</span>
+                    </div>
+                    <div class="summary-col">
+                        <span class="summary-label">₩ 已完成消費</span>
+                        <span class="summary-value">₩${totalSpentKrw.toLocaleString()}</span>
+                        <span style="font-size: 11px; color: var(--accent-color); font-weight: 700; margin-top: 2px;">約 NT$ ${totalSpentTwd.toLocaleString()}</span>
+                    </div>
+                    <div class="summary-col">
+                        <span class="summary-label">⏳ 未買預算</span>
+                        <span class="summary-value" style="color: var(--text-muted);">₩${totalTodoKrw.toLocaleString()}</span>
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 500; margin-top: 2px;">約 NT$ ${totalTodoTwd.toLocaleString()}</span>
+                    </div>
+                </div>
+                
+                <div class="summary-divider"></div>
+                
+                <!-- 個人花費 (已買到) -->
+                <div>
+                    <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: center; margin-bottom: 6px; letter-spacing: 0.5px;">
+                        👥 個人已消費統計 (已買到金額)
+                    </div>
+                    <div class="person-breakdown">
+                        <div class="person-card">
+                            <span class="person-name">依姍</span>
+                            <span class="person-price" style="color: var(--text-main); font-size:12px;">₩${yishanSpent.toLocaleString()}</span>
+                            <span style="font-size: 10px; color: var(--accent-color); font-weight: 700; margin-top: 1px;">NT$ ${yishanTwd.toLocaleString()}</span>
+                        </div>
+                        <div class="person-card">
+                            <span class="person-name">梓綺</span>
+                            <span class="person-price" style="color: var(--text-main); font-size:12px;">₩${ziqiSpent.toLocaleString()}</span>
+                            <span style="font-size: 10px; color: var(--accent-color); font-weight: 700; margin-top: 1px;">NT$ ${ziqiTwd.toLocaleString()}</span>
+                        </div>
+                        <div class="person-card">
+                            <span class="person-name">冠曄</span>
+                            <span class="person-price" style="color: var(--text-main); font-size:12px;">₩${guanyeSpent.toLocaleString()}</span>
+                            <span style="font-size: 10px; color: var(--accent-color); font-weight: 700; margin-top: 1px;">NT$ ${guanyeTwd.toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
     </script>
