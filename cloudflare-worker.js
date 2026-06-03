@@ -3,7 +3,7 @@ export default {
     // 設置 CORS 標頭，允許前端網域跨網域存取
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*", // 部署後您可以改為您的 github.io 網址以提升安全性
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     };
 
@@ -12,7 +12,42 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // 只允許 POST 請求
+    const url = new URL(request.url);
+
+    // 處理圖片的 GET 請求：從 R2 讀取並回傳
+    if (request.method === "GET" && url.pathname.startsWith("/images/")) {
+      const filename = url.pathname.substring(8); // 去除 "/images/"
+      if (!env.MY_BUCKET) {
+        return new Response("R2 儲存桶 'MY_BUCKET' 未綁定，請在 Cloudflare 控制台進行設定。", {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "text/plain" }
+        });
+      }
+      try {
+        const object = await env.MY_BUCKET.get(filename);
+        if (object === null) {
+          return new Response("Image Not Found", {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "text/plain" }
+          });
+        }
+        const headers = new Headers();
+        object.writeHttpMetadata(headers);
+        headers.set("etag", object.httpEtag);
+        headers.set("Access-Control-Allow-Origin", "*");
+        headers.set("Cache-Control", "public, max-age=31536000"); // 瀏覽器與 Notion 快取 1 年
+        return new Response(object.body, {
+          headers
+        });
+      } catch (err) {
+        return new Response(`讀取圖片出錯: ${err.message || String(err)}`, {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "text/plain" }
+        });
+      }
+    }
+
+    // 只允許 POST 請求（GET 只有 /images/ 開頭會被放行）
     if (request.method !== "POST") {
       return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
         status: 405,
@@ -51,33 +86,76 @@ export default {
       if (requestData.imageFile) {
         try {
           const base64String = requestData.imageFile;
-          
-          if (env.IMGBB_API_KEY) {
-            // 優先上傳到 ImgBB
-            const cleanBase64 = base64String.replace(/^data:image\/\w+;base64,/, "");
-            const formData = new FormData();
-            formData.append("image", cleanBase64);
 
-            const imgbbResponse = await fetch(`https://api.imgbb.com/1/upload?key=${env.IMGBB_API_KEY}`, {
-              method: "POST",
-              body: formData
-            });
-
-            if (imgbbResponse.ok) {
-              const imgbbData = await imgbbResponse.json();
-              imageUrl = imgbbData.data?.url;
-              if (!imageUrl) {
-                uploadErrorMessage += "ImgBB 上傳成功但未回傳圖片網址。";
+          // 1. 優先嘗試上傳至 Cloudflare R2
+          if (env.MY_BUCKET) {
+            try {
+              const base64Parts = base64String.split(',');
+              if (base64Parts.length < 2) {
+                throw new Error("Base64 資料格式不正確");
               }
-            } else {
-              const errText = await imgbbResponse.text();
-              uploadErrorMessage += `ImgBB 上傳失敗 (HTTP ${imgbbResponse.status}): ${errText.substring(0, 150)}。`;
+              const mimeType = base64Parts[0].match(/:(.*?);/)[1];
+              const base64Data = base64Parts[1];
+              
+              // 解碼 Base64 為 Binary Uint8Array
+              const byteCharacters = atob(base64Data);
+              const byteNumbers = new Array(byteCharacters.length);
+              for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+              }
+              const byteArray = new Uint8Array(byteNumbers);
+
+              // 產生隨機且唯一的檔名
+              const fileExtension = mimeType.split('/')[1] || "jpg";
+              const filename = `image-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExtension}`;
+
+              // 上傳至 Cloudflare R2
+              await env.MY_BUCKET.put(filename, byteArray, {
+                httpMetadata: { contentType: mimeType }
+              });
+
+              // 取得目前的 Worker 網域作為公開存取連結
+              const workerOrigin = url.origin;
+              imageUrl = `${workerOrigin}/images/${filename}`;
+            } catch (r2Err) {
+              uploadErrorMessage += `Cloudflare R2 上傳失敗: ${r2Err.message || String(r2Err)}。`;
             }
           } else {
-            uploadErrorMessage += "未設定環境變數 IMGBB_API_KEY。";
+            uploadErrorMessage += "未設定 R2 儲存桶 MY_BUCKET。";
           }
 
-          // 如果沒有 ImgBB 金鑰或上傳失敗，備用上傳到 Catbox
+          // 2. 如果沒有 R2 或是 R2 上傳失敗，備用使用 ImgBB
+          if (!imageUrl) {
+            if (env.IMGBB_API_KEY) {
+              try {
+                const cleanBase64 = base64String.replace(/^data:image\/\w+;base64,/, "");
+                const formData = new FormData();
+                formData.append("image", cleanBase64);
+
+                const imgbbResponse = await fetch(`https://api.imgbb.com/1/upload?key=${env.IMGBB_API_KEY}`, {
+                  method: "POST",
+                  body: formData
+                });
+
+                if (imgbbResponse.ok) {
+                  const imgbbData = await imgbbResponse.json();
+                  imageUrl = imgbbData.data?.url;
+                  if (!imageUrl) {
+                    uploadErrorMessage += " ImgBB 上傳成功但未回傳圖片網址。";
+                  }
+                } else {
+                  const errText = await imgbbResponse.text();
+                  uploadErrorMessage += ` ImgBB 上傳失敗 (HTTP ${imgbbResponse.status}): ${errText.substring(0, 150)}。`;
+                }
+              } catch (imgbbErr) {
+                uploadErrorMessage += ` ImgBB 上傳過程出錯: ${imgbbErr.message || String(imgbbErr)}。`;
+              }
+            } else {
+              uploadErrorMessage += " 未設定環境變數 IMGBB_API_KEY。";
+            }
+          }
+
+          // 3. 如果前兩者都無法取得圖片網址，備用上傳到 Catbox
           if (!imageUrl) {
             try {
               const base64Parts = base64String.split(',');

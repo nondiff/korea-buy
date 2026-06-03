@@ -1179,7 +1179,7 @@
 
                 const result = await response.json();
                 if (compressedImageBase64 && result.imageUploadError) {
-                    alert("⚠️ 商品已成功新增到 Notion，但圖片上傳失敗！\n\n失敗原因：\n" + result.imageUploadError + "\n\n💡 建議與提示：\n1. 如果您尚未在 Cloudflare Worker 中設定 IMGBB_API_KEY 環境變數，強烈建議您前往 https://api.imgbb.com/ 註冊免費帳號並取得 API Key，然後在 Cloudflare Worker 儀表板的 Environment Variables 設定中新增變數，因為備用的 Catbox 匿名上傳服務極易受到 Cloudflare / 網路限制而失敗。\n2. 請確認您的手機網路連線是否穩定。");
+                    alert("⚠️ 商品已成功新增到 Notion，但圖片上傳失敗！\n\n失敗原因：\n" + result.imageUploadError + "\n\n💡 建議與提示：\n1. (最推薦) 開啟並綁定 Cloudflare R2 儲存桶（綁定名稱設定為 MY_BUCKET），完全免費且 100% 穩定！\n2. 或者，前往 https://api.imgbb.com/ 註冊免費帳號並取得 API Key，於 Cloudflare Worker 環境變數新增 IMGBB_API_KEY。\n3. 請確認手機網路連線是否穩定。");
                 } else {
                     alert("🎉 商品已成功新增到 Notion！");
                 }
