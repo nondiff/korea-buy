@@ -712,6 +712,104 @@
             font-weight: 700;
             color: var(--text-main);
         }
+
+        /* 優先級篩選列 */
+        .priority-filters-row {
+            display: flex;
+            background-color: #E6E1D8;
+            padding: 3px;
+            border-radius: 12px;
+            margin-bottom: 14px;
+            gap: 3px;
+        }
+        .priority-btn {
+            flex: 1;
+            border: none;
+            background: none;
+            padding: 7px 10px;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+            border-radius: 9px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .priority-btn.active {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        /* iOS 風格分段選擇器 (Segmented Control) */
+        .segmented-control {
+            display: flex;
+            background-color: #E6E1D8;
+            padding: 3px;
+            border-radius: 10px;
+            gap: 4px;
+            width: 100%;
+        }
+        .seg-btn {
+            flex: 1;
+            border: none;
+            background: none;
+            padding: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .seg-btn.active {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 優先級彩色標籤 */
+        .priority-tag {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 6px;
+            margin-right: 6px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .priority-tag.must-buy {
+            background-color: #FFF0EE;
+            color: #D06A58;
+            border: 1px solid #FFD6D0;
+        }
+        .priority-tag.find-buy {
+            background-color: #EFEBE4;
+            color: #8A7A71;
+            border: 1px solid #E6E1D8;
+        }
+
+        /* 優先級與狀態卡片背景顏色區分 */
+        .item-row-card.must-buy {
+            background-color: #FDF3F0; /* 溫暖柔和的珊瑚粉（重要必買） */
+            border-color: #FADAD2;
+        }
+        .item-row-card.find-buy {
+            background-color: #FAF8F5; /* 溫雅純淨的奶油白（找到再買/隨緣） */
+            border-color: var(--border-light);
+        }
+        .item-row-card.done {
+            opacity: 0.6;
+            background-color: #EFECE6 !important; /* 灰白淡化（已買到） */
+            border-color: #E2DDD3 !important;
+        }
     </style>
 </head>
 
@@ -746,6 +844,12 @@
             <button class="tab-btn" onclick="switchCategory('guanye')">冠曄</button>
         </nav>
 
+        <div class="priority-filters-row">
+            <button class="priority-btn active" data-value="all" onclick="switchPriorityFilter('all')">全部</button>
+            <button class="priority-btn" data-value="must-buy" onclick="switchPriorityFilter('must-buy')">🔥 重要必買</button>
+            <button class="priority-btn" data-value="find-buy" onclick="switchPriorityFilter('find-buy')">🔍 找到再買</button>
+        </div>
+
         <div class="loc-filters-row" id="locFiltersContainer" style="display: none;">
             <!-- 動態生成地點膠囊 -->
         </div>
@@ -771,6 +875,15 @@
 
             <div class="modal-img-container">
                 <img class="modal-img" id="modalImg" src="" alt="商品圖片">
+            </div>
+
+            <div class="detail-tile-box">
+                <div class="tile-label">✧ 購買優先級</div>
+                <div class="segmented-control" id="modalPrioritySeg">
+                    <button type="button" class="seg-btn active" data-value="must-buy" onclick="selectSeg('modalPrioritySeg', 'must-buy')">🔥 重要必買</button>
+                    <button type="button" class="seg-btn" data-value="find-buy" onclick="selectSeg('modalPrioritySeg', 'find-buy')">🔍 找到再買</button>
+                </div>
+                <div class="modal-hint-text" id="modalPriorityHint" style="margin-top:6px; color:#EF6C00; display:none; text-align:left; font-weight:700;">⚠️ Notion 資料庫尚未建立 Priority 單選欄位，此分類僅在本地生效，無法同步。</div>
             </div>
 
             <div class="detail-tile-box">
@@ -853,6 +966,15 @@
             </div>
 
             <div class="detail-tile-box">
+                <div class="tile-label">✧ 購買優先級</div>
+                <div class="segmented-control" id="addPrioritySeg">
+                    <button type="button" class="seg-btn active" data-value="must-buy" onclick="selectSeg('addPrioritySeg', 'must-buy')">🔥 重要必買</button>
+                    <button type="button" class="seg-btn" data-value="find-buy" onclick="selectSeg('addPrioritySeg', 'find-buy')">🔍 找到再買</button>
+                </div>
+                <div class="modal-hint-text" id="addPriorityHint" style="margin-top:6px; color:#EF6C00; display:none; text-align:left; font-weight:700;">⚠️ Notion 資料庫尚未建立 Priority 單選欄位，此分類僅在本地生效，無法同步。</div>
+            </div>
+
+            <div class="detail-tile-box">
                 <div class="tile-label">✧ 商品圖片</div>
                 <input type="file" id="addImage" accept="image/*" style="display:none;" onchange="handleImageSelect(event)">
                 <div class="modal-img-container" style="height:170px; cursor:pointer; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6px;" onclick="document.getElementById('addImage').click()">
@@ -926,6 +1048,7 @@
 
         let items = [];
         let currentFilter = 'all';
+        let currentPriorityFilter = 'all';
         let currentLocFilter = 'all';
         let editingIndex = null;
         
@@ -935,6 +1058,11 @@
             yishan: 'yishan (依姍)', 
             ziqi: 'ziqi (梓綺)', 
             guanye: 'guanye (冠曄)' 
+        };
+        let hasPriorityProp = false;
+        let priorityRegistry = {
+            'must-buy': '重要必買',
+            'find-buy': '找到再買'
         };
 
         window.onload = function () {
@@ -1012,6 +1140,22 @@
                                     categoryRegistry.ziqi = name;
                                 } else if (lowerName.includes('guanye') || name.includes('冠') || name.includes('曄')) {
                                     categoryRegistry.guanye = name;
+                                }
+                            });
+                        }
+
+                        // 讀取 Priority 屬性的所有選項
+                        const priorityProp = schemaData.properties?.Priority;
+                        if (priorityProp) {
+                            hasPriorityProp = true;
+                            const options = priorityProp.select?.options || [];
+                            options.forEach(opt => {
+                                const name = opt.name;
+                                const lowerName = name.toLowerCase();
+                                if (lowerName.includes('must') || name.includes('重要') || name.includes('必買')) {
+                                    priorityRegistry['must-buy'] = name;
+                                } else if (lowerName.includes('found') || name.includes('找到') || name.includes('再買')) {
+                                    priorityRegistry['find-buy'] = name;
                                 }
                             });
                         }
@@ -1093,7 +1237,17 @@
                     // 9. TaxRefund 欄位
                     const taxRefund = p.TaxRefund?.checkbox || false;
 
-                    return { id: page.id, category, name, price, quantity: p.Quantity?.number || 1, actualTwd, taxRefund, status, statusType, loc, desc, img, invoiceNo };
+                    // 11. Priority 欄位：模糊比對文字分類，如果沒填或不符合則預設為 must-buy
+                    const rawPriority = p.Priority?.select?.name || "";
+                    const rawPriorityLower = rawPriority.toLowerCase();
+                    let priority = 'must-buy';
+                    if (rawPriorityLower.includes('found') || rawPriority.includes('找到') || rawPriority.includes('再買') || rawPriority.includes('隨緣')) {
+                        priority = 'find-buy';
+                    } else if (rawPriorityLower.includes('must') || rawPriority.includes('重要') || rawPriority.includes('必買')) {
+                        priority = 'must-buy';
+                    }
+
+                    return { id: page.id, category, priority, name, price, quantity: p.Quantity?.number || 1, actualTwd, taxRefund, status, statusType, loc, desc, img, invoiceNo };
                 });
 
                 renderLocationFilters();
@@ -1111,13 +1265,21 @@
 
         // 重新渲染清單
         function renderList() {
-            // 智慧排序：未採購（todo）優先排在上面，已完成（done）沉底；同狀態下按地點（Location）字元排序，未指定地點排最後
+            // 智慧排序：未採購（todo）優先排在上面，已完成（done）沉底；同狀態下優先級必須購買優先；最後按地點（Location）字元排序，未指定地點排最後
             items.sort((a, b) => {
                 // 1. 狀態排序 (todo = -1, done = 1)
                 if (a.status === 'todo' && b.status === 'done') return -1;
                 if (a.status === 'done' && b.status === 'todo') return 1;
                 
-                // 2. 地點排序 (中文/英文排序)
+                // 2. 優先級排序 (must-buy = -1, find-buy = 1)
+                const priorityOrder = { 'must-buy': 1, 'find-buy': 2 };
+                const pA = priorityOrder[a.priority] || 1;
+                const pB = priorityOrder[b.priority] || 1;
+                if (pA !== pB) {
+                    return pA - pB;
+                }
+                
+                // 3. 地點排序 (中文/英文排序)
                 const locA = (a.loc || "").trim();
                 const locB = (b.loc || "").trim();
                 const isDefaultA = locA === "未指定地點" || locA === "";
@@ -1136,6 +1298,9 @@
 
             items.forEach((item, index) => {
                 if (currentFilter !== 'all' && item.category !== currentFilter) return;
+
+                // 優先級過濾
+                if (currentPriorityFilter !== 'all' && item.priority !== currentPriorityFilter) return;
 
                 // 地點膠囊過濾
                 if (currentLocFilter !== 'all') {
@@ -1166,13 +1331,18 @@
                 const personNames = { yishan: '依姍', ziqi: '梓綺', guanye: '冠曄' };
                 const personName = personNames[item.category] || '';
                 const personTagHtml = personName ? `<span class="person-tag ${item.category}">${personName}</span>` : '';
+                
+                const priorityNames = { 'must-buy': '🔥 必買', 'find-buy': '🔍 隨緣' };
+                const priorityName = priorityNames[item.priority] || '🔥 必買';
+                const priorityTagHtml = `<span class="priority-tag ${item.priority || 'must-buy'}">${priorityName}</span>`;
+
                 const taxFreeBadgeHtml = isTaxRefundEligible ? `<span class="taxfree-badge">免稅</span>` : '';
 
                 const cardHtml = `
-                    <div class="item-row-card" onclick="openDetail(${index})">
+                    <div class="item-row-card ${item.priority || 'must-buy'} ${isDone ? 'done' : ''}" onclick="openDetail(${index})">
                         <img class="item-row-img" src="${item.img}" alt="${item.name}">
                         <div class="item-row-info">
-                            <span class="item-row-name">${personTagHtml}${item.name} <span style="color:var(--accent-color); font-size:13px; font-weight:700; margin-left: 4px;">x${qty}</span>${taxFreeBadgeHtml}</span>
+                            <span class="item-row-name">${personTagHtml}${priorityTagHtml}${item.name} <span style="color:var(--accent-color); font-size:13px; font-weight:700; margin-left: 4px;">x${qty}</span>${taxFreeBadgeHtml}</span>
                             <div class="item-row-meta">
                                 <span>📍 ${item.loc.split('/')[0].trim()}</span>
                                 ${item.invoiceNo ? `<span style="margin-left: 8px;">🧾 ${item.invoiceNo}</span>` : ''}
@@ -1206,6 +1376,41 @@
             event.target.classList.add('active');
             renderLocationFilters();
             renderList();
+        }
+
+        function switchPriorityFilter(priority) {
+            currentPriorityFilter = priority;
+            currentLocFilter = 'all'; // 重設地點篩選
+            document.querySelectorAll('.priority-btn').forEach(btn => {
+                if (btn.getAttribute('data-value') === priority) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            renderLocationFilters();
+            renderList();
+        }
+
+        // 選擇 Segmented Control 選項
+        function selectSeg(containerId, value) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.querySelectorAll('.seg-btn').forEach(btn => {
+                if (btn.getAttribute('data-value') === value) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // 取得 Segmented Control 的當前選取值
+        function getSegValue(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return null;
+            const activeBtn = container.querySelector('.seg-btn.active');
+            return activeBtn ? activeBtn.getAttribute('data-value') : null;
         }
 
         // 即時切換已採購狀態
@@ -1276,6 +1481,12 @@
             document.getElementById('modalLocInput').value = item.loc;
             document.getElementById('modalInvoiceNoInput').value = item.invoiceNo || '';
 
+            // 設定優先級 Segmented Control
+            selectSeg('modalPrioritySeg', item.priority || 'must-buy');
+
+            // 顯示/隱藏未建立 Notion 屬性的警告提示
+            document.getElementById('modalPriorityHint').style.display = hasPriorityProp ? 'none' : 'block';
+
             // 即時計算台幣提示
             document.getElementById('modalTwdPriceHint').innerText = `約 NT$ ${twdPrice.toLocaleString()}`;
             
@@ -1301,6 +1512,7 @@
             const newDesc = document.getElementById('modalDescInput').value.trim();
             const newLoc = document.getElementById('modalLocInput').value.trim();
             const newInvoiceNo = document.getElementById('modalInvoiceNoInput').value.trim();
+            const newPriority = getSegValue('modalPrioritySeg') || 'must-buy';
 
             // 鎖定按鈕並顯示載入中
             saveBtn.disabled = true;
@@ -1340,6 +1552,14 @@
                 }
             };
 
+            if (hasPriorityProp) {
+                properties["Priority"] = {
+                    "select": {
+                        "name": priorityRegistry[newPriority]
+                    }
+                };
+            }
+
             try {
                 const response = await fetch(WORKER_URL, {
                     method: "POST",
@@ -1364,6 +1584,7 @@
                 item.desc = newDesc;
                 item.loc = newLoc;
                 item.invoiceNo = newInvoiceNo;
+                item.priority = newPriority;
                 renderLocationFilters();
                 renderList();
                 closeModal();
@@ -1401,6 +1622,10 @@
             document.getElementById('addInvoiceNo').value = '';
             document.getElementById('addTwdPriceHint').innerText = '約 NT$ 0';
             
+            // 重設優先級 Segmented Control
+            selectSeg('addPrioritySeg', 'must-buy');
+            document.getElementById('addPriorityHint').style.display = hasPriorityProp ? 'none' : 'block';
+
             // 重設圖片上傳與預覽狀態
             document.getElementById('addImage').value = '';
             document.getElementById('addImgPlaceholder').style.display = 'block';
@@ -1491,6 +1716,7 @@
             const desc = document.getElementById('addDesc').value.trim();
             const loc = document.getElementById('addLoc').value.trim();
             const invoiceNo = document.getElementById('addInvoiceNo').value.trim();
+            const priorityKey = getSegValue('addPrioritySeg') || 'must-buy';
             
             if (!name) {
                 alert("請填寫商品名稱！");
@@ -1567,6 +1793,14 @@
                 },
                 "Status": statusPayload
             };
+
+            if (hasPriorityProp) {
+                properties["Priority"] = {
+                    "select": {
+                        "name": priorityRegistry[priorityKey]
+                    }
+                };
+            }
 
             const payload = {
                 action: "createPage",
@@ -1733,9 +1967,10 @@
             const container = document.getElementById('locFiltersContainer');
             if (!container) return;
 
-            // 提取當前人名分頁下的所有可用地點
+            // 提取當前人名分頁與優先級下的所有可用地點
             const activeItemsForLoc = items.filter(item => {
                 if (currentFilter !== 'all' && item.category !== currentFilter) return false;
+                if (currentPriorityFilter !== 'all' && item.priority !== currentPriorityFilter) return false;
                 return true;
             });
 
