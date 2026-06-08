@@ -203,6 +203,14 @@
             min-width: 0;
         }
 
+        .item-row-name-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+            width: 100%;
+        }
+
         .item-row-name {
             font-size: 15px;
             font-weight: 700;
@@ -210,6 +218,22 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            min-width: 0;
+            flex-shrink: 1;
+        }
+
+        .item-row-qty-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .item-row-qty {
+            color: var(--accent-color);
+            font-size: 13px;
+            font-weight: 700;
+            font-family: 'Comfortaa', sans-serif;
         }
 
         .item-row-meta {
@@ -1342,7 +1366,12 @@
                     <div class="item-row-card ${item.priority || 'must-buy'} ${isDone ? 'done' : ''}" onclick="openDetail(${index})">
                         <img class="item-row-img" src="${item.img}" alt="${item.name}">
                         <div class="item-row-info">
-                            <span class="item-row-name">${personTagHtml}${priorityTagHtml}${item.name} <span style="color:var(--accent-color); font-size:13px; font-weight:700; margin-left: 4px;">x${qty}</span>${taxFreeBadgeHtml}</span>
+                            <div class="item-row-name-row">
+                                <span class="item-row-name">${personTagHtml}${priorityTagHtml}${item.name}</span>
+                                <span class="item-row-qty-box">
+                                    <span class="item-row-qty">x${qty}</span>${taxFreeBadgeHtml}
+                                </span>
+                            </div>
                             <div class="item-row-meta">
                                 <span>📍 ${item.loc.split('/')[0].trim()}</span>
                                 ${item.invoiceNo ? `<span style="margin-left: 8px;">🧾 ${item.invoiceNo}</span>` : ''}
